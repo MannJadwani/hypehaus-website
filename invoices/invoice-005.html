@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice #5 - NeuralARC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Urbanist', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0B0B0D 0%, #141519 100%);
+      color: rgba(255, 255, 255, 0.95);
+      min-height: 100vh;
+      padding: 1.5rem;
+      font-size: 14px;
+    }
+
+    .invoice-container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: #141519;
+      border-radius: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+
+    .invoice-header {
+      background: linear-gradient(135deg, #8B5CF6 0%, #2B124C 100%);
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-section h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logo-box {
+      width: 28px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.875rem;
+    }
+
+    .invoice-badge {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 0.5rem 1rem;
+      border-radius: 0.75rem;
+      text-align: right;
+    }
+
+    .invoice-badge .label {
+      font-size: 0.625rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .invoice-badge .number {
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+
+    .invoice-body {
+      padding: 1.5rem;
+    }
+
+    .billing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .section-label {
+      font-size: 0.625rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #8B5CF6;
+      margin-bottom: 0.375rem;
+      font-weight: 600;
+    }
+
+    .billing-section p {
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.5;
+      font-size: 0.8125rem;
+    }
+
+    .billing-section p strong {
+      color: rgba(255, 255, 255, 0.95);
+      font-weight: 600;
+    }
+
+    .project-section {
+      background: #1E1F24;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .project-name {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .project-desc {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.8125rem;
+      line-height: 1.4;
+    }
+
+    .meta-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .meta-item {
+      background: #1E1F24;
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .meta-item .label {
+      font-size: 0.625rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .meta-item .value {
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .table-container {
+      background: #1E1F24;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      margin-bottom: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: #25262C;
+      padding: 0.625rem 1rem;
+      text-align: left;
+      font-size: 0.625rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.6);
+      font-weight: 600;
+    }
+
+    th:last-child {
+      text-align: right;
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.8125rem;
+    }
+
+    td:last-child {
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .desc-cell .main {
+      font-weight: 500;
+    }
+
+    .desc-cell .sub {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.75rem;
+    }
+
+    .total-row {
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .total-row td {
+      font-weight: 700;
+      color: #8B5CF6;
+    }
+
+    .amount-due {
+      background: linear-gradient(135deg, #8B5CF6 0%, #2B124C 100%);
+      border-radius: 0.75rem;
+      padding: 1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .amount-due .label {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .amount-due .value {
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .info-box {
+      background: #1E1F24;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .info-box p {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.8125rem;
+      line-height: 1.6;
+    }
+
+    .info-box p strong {
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .notes-section {
+      background: rgba(163, 64, 84, 0.1);
+      border: 1px solid rgba(163, 64, 84, 0.3);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .notes-section .section-label {
+      color: #A34054;
+    }
+
+    .notes-section ul {
+      list-style: none;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.8125rem;
+    }
+
+    .notes-section li {
+      padding: 0.125rem 0 0.125rem 0.75rem;
+      position: relative;
+    }
+
+    .notes-section li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #A34054;
+    }
+
+    .signature-section {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .sig-line {
+      width: 150px;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.2);
+      margin-bottom: 0.5rem;
+    }
+
+    .signature-block .name {
+      font-weight: 700;
+      font-size: 0.9375rem;
+    }
+
+    .signature-block .company {
+      color: #8B5CF6;
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+
+    .footer-logo {
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 0.625rem;
+    }
+
+    @media print {
+      body {
+        background: white;
+        color: #1a1a1a;
+        padding: 0;
+      }
+
+      .invoice-container {
+        box-shadow: none;
+        border: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+
+      .billing-grid,
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .invoice-header {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .meta-row {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="invoice-container">
+    <div class="invoice-header">
+      <div class="logo-section">
+        <h1>
+          <div class="logo-box">N</div> NeuralARC
+        </h1>
+      </div>
+      <div class="invoice-badge">
+        <div class="label">Invoice</div>
+        <div class="number">#005</div>
+      </div>
+    </div>
+
+    <div class="invoice-body">
+      <div class="billing-grid">
+        <div class="billing-section">
+          <div class="section-label">Bill From</div>
+          <p><strong>NeuralARC (Mann Jadwani)</strong><br>Mumbai, India<br>Account: THE NEURALARC<br>A/C:
+            925020001532900<br>IFSC: UTIB0000651, Axis Bank</p>
+        </div>
+        <div class="billing-section">
+          <div class="section-label">Bill To</div>
+          <p><strong>BLINKCAR INDIA PRIVATE LIMITED</strong></p>
+        </div>
+      </div>
+
+      <div class="project-section">
+        <div class="section-label">Project</div>
+        <div class="project-name">HypeHaus Website Development</div>
+        <div class="project-desc">Complete website clone of the HypeHaus mobile app with all features including event
+          discovery, ticket booking, authentication, wishlist, and profile management.</div>
+      </div>
+
+      <div class="meta-row">
+        <div class="meta-item">
+          <div class="label">Invoice Date</div>
+          <div class="value">16 December 2024</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Milestone</div>
+          <div class="value">Milestone 1 — Project Initiation (40%)</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="desc-cell">
+                  <div class="main">Total Project Cost</div>
+                  <div class="sub">HypeHaus Website — Full Development</div>
+                </div>
+              </td>
+              <td>₹1,00,000</td>
+            </tr>
+            <tr>
+              <td>
+                <div class="desc-cell">
+                  <div class="main">Milestone 1 — Initial Payment (40%)</div>
+                  <div class="sub">Work begins after this payment</div>
+                </div>
+              </td>
+              <td>₹40,000</td>
+            </tr>
+            <tr>
+              <td>
+                <div class="desc-cell">
+                  <div class="main">Milestone 2 — Final Delivery (60%)</div>
+                  <div class="sub">Due upon completion</div>
+                </div>
+              </td>
+              <td>₹60,000</td>
+            </tr>
+            <tr class="total-row">
+              <td><strong>Total Project Value</strong></td>
+              <td>₹1,00,000</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="amount-due">
+        <span class="label">Amount Due Now (Milestone 1)</span>
+        <span class="value">₹40,000</span>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-box">
+          <div class="section-label">Payment Instructions</div>
+          <p><strong>Bank Transfer / UPI</strong><br>Account: THE NEURALARC<br>A/C: 925020001532900<br>IFSC:
+            UTIB0000651, Axis Bank</p>
+        </div>
+        <div class="info-box">
+          <div class="section-label">Payment Schedule</div>
+          <p><strong>Milestone 1:</strong> ₹40,000 — Due now<br><strong>Milestone 2:</strong> ₹60,000 — On delivery</p>
+        </div>
+      </div>
+
+      <div class="notes-section">
+        <div class="section-label">Important Notes</div>
+        <ul>
+          <li>This invoice covers Milestone 1 payment only.</li>
+          <li>Work begins only after this payment is received.</li>
+          <li>This payment is non-refundable.</li>
+        </ul>
+      </div>
+
+      <div class="signature-section">
+        <div class="signature-block">
+          <div class="sig-line"></div>
+          <div class="name">Mann Jadwani</div>
+          <div class="company">NeuralARC</div>
+        </div>
+        <div class="footer-logo">NeuralARC Invoice System</div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
