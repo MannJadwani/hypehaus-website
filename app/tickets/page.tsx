@@ -410,7 +410,7 @@ export default function TicketsPage() {
                 {/* QR Code */}
                 <div className="p-6 flex flex-col items-center">
                   <div
-                    className="p-4 rounded-2xl mb-4"
+                    className="p-4 mb-4"
                     style={{
                       background: '#0B0B0D',
                       border: '1px solid rgba(255,255,255,0.1)',
@@ -423,7 +423,7 @@ export default function TicketsPage() {
                       alt="QR Code"
                       width={220}
                       height={220}
-                      className="rounded-xl"
+
                       style={{ imageRendering: 'pixelated' }}
                     />
                   </div>

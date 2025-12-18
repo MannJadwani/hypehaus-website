@@ -97,6 +97,14 @@ function PaymentContent() {
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [needCab, setNeedCab] = useState(false);
 
+  // Check if Razorpay is already loaded (for client-side navigation)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.Razorpay) {
+      setRazorpayLoaded(true);
+      console.log('Razorpay SDK already loaded on mount');
+    }
+  }, []);
+
   // Load initial data
   useEffect(() => {
     const fetchData = async () => {
@@ -175,6 +183,19 @@ function PaymentContent() {
     });
   }, [qty]);
 
+  // Timeout for Razorpay SDK load
+  useEffect(() => {
+    if (!razorpayLoaded) {
+      const timer = setTimeout(() => {
+        if (!razorpayLoaded) {
+          console.error('Razorpay SDK load timeout');
+          setError('Payment system is taking too long to load. Check your internet connection or disable ad blockers.');
+        }
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [razorpayLoaded]);
+
   const totalAmount = (tier?.price_cents || 0) * qty;
 
   const updateAttendeeName = (index: number, value: string) => {
@@ -204,9 +225,14 @@ function PaymentContent() {
   };
 
   const handlePayment = async () => {
-    if (!user || !event || !tier) return;
+    console.log('handlePayment initiated');
+    if (!user || !event || !tier) {
+      console.warn('Missing user, event, or tier');
+      return;
+    }
 
     if (!validateForm()) {
+      console.warn('Form validation failed');
       return;
     }
 
@@ -219,6 +245,7 @@ function PaymentContent() {
     setError(null);
 
     try {
+      console.log('Getting session...');
       // Get auth session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -228,6 +255,7 @@ function PaymentContent() {
       // Generate receipt ID
       const receiptId = `HYPEHAUS-WEB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+      console.log('Creating Razorpay order...');
       // Call Edge Function to create Razorpay order (not payment link)
       const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
         body: {
@@ -257,7 +285,7 @@ function PaymentContent() {
         },
       });
 
-      console.log('Order response:', orderData);
+
 
       if (orderError) {
         console.error('Edge Function error:', orderError);
@@ -266,9 +294,10 @@ function PaymentContent() {
 
       if (!orderData?.order_id || !orderData?.key_id) {
         console.error('Missing order_id or key_id:', orderData);
-        throw new Error('Invalid order response');
+        throw new Error('Invalid order response: ' + JSON.stringify(orderData));
       }
 
+      console.log('Opening Razorpay options...');
       // Open Razorpay checkout modal
       const options: RazorpayOptions = {
         key: orderData.key_id, // Use key from Edge Function response
@@ -292,7 +321,7 @@ function PaymentContent() {
         },
         handler: async (response: RazorpayResponse) => {
           // Payment successful - verify and create tickets
-          console.log('Razorpay payment success callback:', response);
+
           setVerifying(true);
           setProcessing(false);
 
@@ -379,19 +408,38 @@ function PaymentContent() {
         },
         modal: {
           ondismiss: () => {
+            console.log('Razorpay modal dismissed');
             setProcessing(false);
-            setError('Payment was cancelled. Please try again.');
+            setError('Payment was cancelled.');
           },
           escape: true,
           backdropclose: false,
         },
       };
 
+      console.log('Initializing Razorpay instance...');
       const rzp = new window.Razorpay(options);
       rzp.open();
-      setProcessing(false);
+      // NOTE: Do NOT setProcessing(false) here. It should stay true until modal action.
+      // previous code had setProcessing(false) here which caused "Loading" to disappear prematurely?
+      // User says "keeps loading" -> so processing is TRUE.
+      // If I remove setProcessing(false), it stays loading until modal opens?
+      // Razorpay modal opening is sync? No.
+      // rzp.open() is sync but overlay appears.
+
+      // If I setProcessing(false) immediately, the button becomes clickable again.
+      // Usually we keep it disabled.
+      // BUT if the modal fails to open, we are stuck.
+      // Razorpay doesn't provide a callback for "modal opened".
+      // I will keep processing=false immediately to allow retry if needed, OR use a timeout.
+      // Actually, standard practice is to keep it loading.
+      // But if user says "nothing happens", maybe modal is blocked?
+      // I'll setProcessing(false) after a small delay? 
+      // No, let's keep it simple: setProcessing(false) ONLY in ondismiss/handler.
+      // wait, `rzp.open()` returns void.
 
     } catch (err: unknown) {
+      console.error('handlePayment exception:', err);
       const message = err instanceof Error ? err.message : 'Payment failed';
       setError(message);
       setProcessing(false);
@@ -431,6 +479,8 @@ function PaymentContent() {
     );
   }
 
+
+
   if (error && !event) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: '#0B0B0D' }}>
@@ -447,8 +497,14 @@ function PaymentContent() {
       {/* Load Razorpay Checkout Script */}
       <Script
         src="https://checkout.razorpay.com/v1/checkout.js"
-        onLoad={() => setRazorpayLoaded(true)}
-        onError={() => setError('Failed to load payment system')}
+        onLoad={() => {
+          console.log('Razorpay SDK Loaded');
+          setRazorpayLoaded(true);
+        }}
+        onError={(e) => {
+          console.error('Razorpay SDK Load Error', e);
+          setError('Failed to load payment system');
+        }}
       />
 
       <div className="min-h-screen pb-12" style={{ background: '#0B0B0D' }}>
@@ -692,7 +748,7 @@ function PaymentContent() {
               {!razorpayLoaded ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Loading Payment...
+                  Initializing...
                 </>
               ) : processing ? (
                 <>

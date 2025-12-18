@@ -93,10 +93,14 @@ export function Header() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2" style={{ flexShrink: 0 }}>
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #2B124C 100%)' }}
+                className="w-8 h-8 rounded-lg relative overflow-hidden"
               >
-                <span className="text-white font-bold text-sm">H</span>
+                <Image
+                  src="/logo.jpg"
+                  alt="HypeHaus Logo"
+                  fill
+                  className="object-cover"
+                />
               </div>
               <span className="text-xl font-bold" style={{ color: 'rgba(255,255,255,0.95)' }}>
                 HypeHaus

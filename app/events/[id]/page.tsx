@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from '@/components/icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth-context';
@@ -17,6 +17,12 @@ interface TicketTier {
   currency: string | null;
   total_quantity: number;
   sold_quantity: number;
+}
+
+interface EventImage {
+  id: string;
+  url: string;
+  position: number;
 }
 
 interface Event {
@@ -42,6 +48,7 @@ export default function EventDetailsPage() {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [tiers, setTiers] = useState<TicketTier[]>([]);
+  const [images, setImages] = useState<EventImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -75,8 +82,15 @@ export default function EventDetailsPage() {
           .eq('event_id', eventId)
           .order('price_cents', { ascending: true });
 
+        const { data: imagesData } = await supabase
+          .from('event_images')
+          .select('*')
+          .eq('event_id', eventId)
+          .order('position', { ascending: true });
+
         setEvent(eventData);
         setTiers(tiersData || []);
+        setImages(imagesData || []);
 
         if (user) {
           const { data: wishlistData } = await supabase
@@ -110,10 +124,11 @@ export default function EventDetailsPage() {
 
     const update = () => {
       if (past) {
-        const formattedDate = eventStart.toLocaleDateString(undefined, {
+        const formattedDate = eventStart.toLocaleDateString('en-IN', {
           month: 'long',
           day: 'numeric',
           year: 'numeric',
+          timeZone: 'Asia/Kolkata',
         });
         setTimeLeft(`Was on ${formattedDate}`);
         return;
@@ -137,6 +152,54 @@ export default function EventDetailsPage() {
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, [eventStart, past]);
+
+  const heroImage = event?.hero_image_url || 'https://images.unsplash.com/photo-1549451371-64aa98a6f660?q=80&w=2070&auto=format&fit=crop';
+
+  const allImages = useMemo(() => {
+    return [
+      { id: 'hero', url: heroImage },
+      ...images.map(img => ({ id: img.id, url: img.url }))
+    ];
+  }, [heroImage, images]);
+
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [direction, setDirection] = useState(0);
+
+  const slideVariants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? '100%' : '-100%',
+      opacity: 0,
+      zIndex: 0
+    }),
+    center: {
+      zIndex: 1,
+      x: 0,
+      opacity: 1
+    },
+    exit: (direction: number) => ({
+      zIndex: 0,
+      x: direction < 0 ? '100%' : '-100%',
+      opacity: 0
+    })
+  };
+
+  const nextSlide = () => {
+    setDirection(1);
+    setCurrentSlide((prev) => (prev + 1) % allImages.length);
+  };
+
+  const prevSlide = () => {
+    setDirection(-1);
+    setCurrentSlide((prev) => (prev - 1 + allImages.length) % allImages.length);
+  };
+
+  useEffect(() => {
+    if (allImages.length <= 1) return;
+    const interval = setInterval(() => {
+      nextSlide();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [allImages.length, currentSlide]); // Restart timer on manual change
 
   const handleWishlistToggle = async () => {
     if (!user) {
@@ -180,10 +243,19 @@ export default function EventDetailsPage() {
       return;
     }
     if (tiers.length === 0) return;
-    if (tiers.length === 1) {
+
+    const availableTiers = tiers.filter(t => t.total_quantity > t.sold_quantity);
+
+    if (availableTiers.length === 0) {
+      alert('Sorry, this event is sold out!');
+      return;
+    }
+
+    if (tiers.length === 1 && availableTiers.length === 1) {
       router.push(`/payment?eventId=${eventId}&tierId=${tiers[0].id}&qty=1`);
     } else {
-      setSelectedTier(tiers[0]);
+      // Select the first AVAILABLE tier by default
+      setSelectedTier(availableTiers[0]);
       setShowModal(true);
     }
   };
@@ -238,29 +310,94 @@ export default function EventDetailsPage() {
     );
   }
 
-  const heroImage = event.hero_image_url || 'https://images.unsplash.com/photo-1549451371-64aa98a6f660?q=80&w=2070&auto=format&fit=crop';
+
 
   return (
     <>
       <div className="min-h-screen pb-32" style={{ background: '#0B0B0D' }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
           {/* Hero */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative h-72 sm:h-[420px] overflow-hidden mb-6"
+          <div
+            className="relative h-72 sm:h-[420px] overflow-hidden mb-6 group"
             style={{ borderRadius: '1.5rem' }}
           >
-            <Image src={heroImage} alt={event.title} fill className="object-cover" priority />
+            <AnimatePresence initial={false} custom={direction}>
+              <motion.div
+                key={allImages[currentSlide].id}
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{
+                  x: { type: "spring", stiffness: 300, damping: 30 },
+                  opacity: { duration: 0.2 }
+                }}
+                className="absolute inset-0"
+              >
+                <Image
+                  src={allImages[currentSlide].url}
+                  alt={event.title}
+                  fill
+                  className="object-cover"
+                  priority={currentSlide === 0}
+                />
+              </motion.div>
+            </AnimatePresence>
             <div
-              className="absolute inset-0"
+              className="absolute inset-0 z-10"
               style={{
                 background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.3) 100%)'
               }}
             />
 
+            {/* Navigation Buttons */}
+            {allImages.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevSlide();
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 z-20"
+                  style={{
+                    background: 'rgba(20,21,25,0.85)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                  }}
+                >
+                  <Icon name="chevron-left" size={20} style={{ color: 'rgba(255,255,255,0.9)' }} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextSlide();
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 z-20"
+                  style={{
+                    background: 'rgba(20,21,25,0.85)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                  }}
+                >
+                  <Icon name="chevron-right" size={20} style={{ color: 'rgba(255,255,255,0.9)' }} />
+                </button>
+
+                {/* Dots Indicator */}
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                  {allImages.map((_, idx) => (
+                    <div
+                      key={idx}
+                      className={`w-1.5 h-1.5 rounded-full transition-colors ${currentSlide === idx ? 'bg-white' : 'bg-white/30'
+                        }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
             {/* Top row */}
-            <div className="absolute top-4 left-4 right-4 flex items-center gap-3">
+            <div className="absolute top-4 left-4 right-4 flex items-center gap-3 z-20">
               <Link
                 href="/"
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
@@ -332,7 +469,9 @@ export default function EventDetailsPage() {
                 <span className="font-semibold">{event.venue_name || event.city || 'HypeHaus'}</span>
               </div>
             </div>
-          </motion.div>
+          </div>
+
+
 
           {/* Date Badge */}
           {event.start_at && (
@@ -513,37 +652,46 @@ export default function EventDetailsPage() {
             </h2>
 
             <div className="space-y-3 mb-6">
-              {tiers.map((tier) => (
-                <button
-                  key={tier.id}
-                  onClick={() => setSelectedTier(tier)}
-                  className="w-full flex items-center justify-between p-4 rounded-xl transition-all text-left"
-                  style={{
-                    background: selectedTier?.id === tier.id ? 'rgba(139,92,246,0.1)' : '#1E1F24',
-                    border: `1px solid ${selectedTier?.id === tier.id ? '#8B5CF6' : 'rgba(255,255,255,0.06)'}`
-                  }}
-                >
-                  <div>
-                    <h3 className="font-semibold" style={{ color: 'rgba(255,255,255,0.95)' }}>
-                      {tier.name}
-                    </h3>
-                    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                      {tier.total_quantity - tier.sold_quantity} available
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold" style={{ color: 'rgba(255,255,255,0.95)' }}>
-                      {formatPrice(tier.price_cents, tier.currency)}
-                    </span>
-                    {selectedTier?.id === tier.id && (
-                      <div
-                        className="w-5 h-5 rounded-full"
-                        style={{ background: '#8B5CF6' }}
-                      />
-                    )}
-                  </div>
-                </button>
-              ))}
+              {tiers.map((tier) => {
+                const available = tier.total_quantity - tier.sold_quantity;
+                const isSoldOut = available <= 0;
+
+                return (
+                  <button
+                    key={tier.id}
+                    onClick={() => !isSoldOut && setSelectedTier(tier)}
+                    disabled={isSoldOut}
+                    className={`w-full flex items-center justify-between p-4 rounded-xl transition-all text-left ${isSoldOut ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    style={{
+                      background: selectedTier?.id === tier.id
+                        ? 'rgba(139,92,246,0.1)'
+                        : isSoldOut ? '#141519' : '#1E1F24',
+                      border: `1px solid ${selectedTier?.id === tier.id ? '#8B5CF6' : 'rgba(255,255,255,0.06)'}`
+                    }}
+                  >
+                    <div>
+                      <h3 className="font-semibold" style={{ color: 'rgba(255,255,255,0.95)' }}>
+                        {tier.name}
+                      </h3>
+                      <p className="text-sm" style={{ color: isSoldOut ? '#ef4444' : 'rgba(255,255,255,0.5)' }}>
+                        {isSoldOut ? 'Sold Out' : `${available} available`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold" style={{ color: 'rgba(255,255,255,0.95)' }}>
+                        {formatPrice(tier.price_cents, tier.currency)}
+                      </span>
+                      {selectedTier?.id === tier.id && (
+                        <div
+                          className="w-5 h-5 rounded-full"
+                          style={{ background: '#8B5CF6' }}
+                        />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Quantity */}
@@ -562,13 +710,18 @@ export default function EventDetailsPage() {
                     background: '#1E1F24',
                     border: '1px solid rgba(255,255,255,0.06)'
                   }}
+                  disabled={quantity <= 1}
                 >
-                  <Icon name="minus" size={18} style={{ color: 'rgba(255,255,255,0.9)' }} />
+                  <Icon name="minus" size={18} style={{ color: quantity <= 1 ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.9)' }} />
                 </button>
                 <input
                   type="number"
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 1;
+                    const max = selectedTier ? selectedTier.total_quantity - selectedTier.sold_quantity : 10;
+                    setQuantity(Math.min(Math.max(1, val), max));
+                  }}
                   className="w-20 h-12 text-center font-bold rounded-xl"
                   style={{
                     background: '#1E1F24',
@@ -576,18 +729,36 @@ export default function EventDetailsPage() {
                     color: 'rgba(255,255,255,0.95)'
                   }}
                   min={1}
+                  max={selectedTier ? selectedTier.total_quantity - selectedTier.sold_quantity : undefined}
                 />
                 <button
-                  onClick={() => setQuantity(quantity + 1)}
+                  onClick={() => {
+                    const max = selectedTier ? selectedTier.total_quantity - selectedTier.sold_quantity : 10;
+                    if (quantity < max) setQuantity(quantity + 1);
+                  }}
                   className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors"
                   style={{
                     background: '#1E1F24',
                     border: '1px solid rgba(255,255,255,0.06)'
                   }}
+                  disabled={selectedTier ? quantity >= (selectedTier.total_quantity - selectedTier.sold_quantity) : false}
                 >
-                  <Icon name="plus" size={18} style={{ color: 'rgba(255,255,255,0.9)' }} />
+                  <Icon
+                    name="plus"
+                    size={18}
+                    style={{
+                      color: (selectedTier && quantity >= (selectedTier.total_quantity - selectedTier.sold_quantity))
+                        ? 'rgba(255,255,255,0.3)'
+                        : 'rgba(255,255,255,0.9)'
+                    }}
+                  />
                 </button>
               </div>
+              {selectedTier && (selectedTier.total_quantity - selectedTier.sold_quantity) < 10 && (
+                <p className="text-xs mt-2 text-yellow-500">
+                  Only {selectedTier.total_quantity - selectedTier.sold_quantity} tickets left!
+                </p>
+              )}
             </div>
 
             <button onClick={handleContinueToPayment} className="btn-primary w-full">

@@ -184,12 +184,13 @@ export default function HistoryPage() {
                 <div>
                   <h3 className="font-semibold mb-1">{order.event_title}</h3>
                   <p className="text-sm text-[var(--text-tertiary)]">
-                    {new Date(order.created_at).toLocaleDateString(undefined, {
+                    {new Date(order.created_at).toLocaleDateString('en-IN', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit',
+                      timeZone: 'Asia/Kolkata',
                     })}
                   </p>
                   <div className="flex items-center gap-3 mt-2">
