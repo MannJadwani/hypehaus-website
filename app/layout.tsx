@@ -12,6 +12,11 @@ export const metadata: Metadata = {
     description: 'Discover and book the best events, concerts, and experiences in your city.',
     type: 'website',
   },
+  icons: {
+    icon: '/logo.jpg',
+    shortcut: '/logo.jpg',
+    apple: '/logo.jpg',
+  },
 };
 
 export default function RootLayout({

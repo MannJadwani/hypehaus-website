@@ -9,11 +9,11 @@ import { cn } from '@/lib/utils';
 
 export default function OtpPage() {
   const router = useRouter();
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  // inputRefs no longer needed
 
   useEffect(() => {
     const storedPhone = localStorage.getItem('hypehaus_phone');
@@ -24,42 +24,15 @@ export default function OtpPage() {
     setPhone(storedPhone);
   }, [router]);
 
-  const handleChange = (index: number, value: string) => {
-    if (!/^[0-9]*$/.test(value)) return;
-
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const newOtp = [...otp];
-    for (let i = 0; i < pasted.length; i++) {
-      newOtp[i] = pasted[i];
-    }
-    setOtp(newOtp);
-    if (pasted.length === 6) {
-      inputRefs.current[5]?.focus();
-    }
+  // Handlers simplified to just one onChange for the transparent input
+  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setOtp(val);
   };
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    const code = otp.join('');
-    if (code.length !== 6) {
+    if (otp.length !== 6) {
       setError('Please enter the 6-digit code');
       return;
     }
@@ -70,7 +43,7 @@ export default function OtpPage() {
     try {
       const { error: verifyError } = await supabase.auth.verifyOtp({
         phone,
-        token: code,
+        token: otp,
         type: 'sms',
       });
 
@@ -135,26 +108,44 @@ export default function OtpPage() {
         {/* OTP Card */}
         <div className="card p-6">
           <form onSubmit={handleVerify}>
-            <div className="flex justify-center gap-2 mb-6">
-              {otp.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={(el) => { inputRefs.current[index] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  value={digit}
-                  onChange={(e) => handleChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  onPaste={index === 0 ? handlePaste : undefined}
-                  className={cn(
-                    'w-12 h-14 text-center text-2xl font-bold',
-                    'bg-[var(--background-elevated)] rounded-[var(--radius-md)]',
-                    'border border-[var(--border)] focus:border-[var(--primary)]',
-                    'transition-colors'
-                  )}
-                  maxLength={1}
-                />
-              ))}
+
+            {/* Single Hidden Input + Visual Boxes */}
+            <div className="relative w-full mb-6 h-14">
+              <input
+                type="text"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                value={otp}
+                onChange={handleOtpChange}
+                className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-text"
+                autoFocus
+                style={{ fontSize: '16px' }} // Prevent zoom on mobile
+              />
+              <div className="flex justify-between w-full h-full pointer-events-none">
+                {[0, 1, 2, 3, 4, 5].map((index) => {
+                  const isActive = otp.length === index;
+                  const isFilled = otp.length > index;
+                  return (
+                    <div
+                      key={index}
+                      className="w-12 h-14 flex items-center justify-center transition-all duration-200"
+                      style={{
+                        background: '#1E1F24',
+                        border: isActive || isFilled ? '1px solid #8B5CF6' : '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '0.75rem',
+                        color: 'white',
+                        fontSize: '1.5rem',
+                        fontWeight: 'bold',
+                        boxShadow: isActive ? '0 0 0 2px rgba(139, 92, 246, 0.2)' : 'none'
+                      }}
+                    >
+                      {otp[index] || ''}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {error && (
