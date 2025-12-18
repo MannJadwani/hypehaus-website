@@ -11,23 +11,24 @@ export default function ContactPage() {
 
                     <div className="grid md:grid-cols-2 gap-8 mt-8">
                         <div className="bg-[#141519] border border-white/10 rounded-2xl p-8">
-                            <h3 className="text-xl font-bold text-white mb-4">Customer Support</h3>
-                            <p className="mb-6">For issues with tickets, bookings, or payments.</p>
-                            <a href="mailto:support@hypehausco.in" className="text-[#8B5CF6] hover:underline font-semibold block mb-2">support@hypehausco.in</a>
+                            <h3 className="text-xl font-bold text-white mb-4">Get in Touch</h3>
+                            <p className="mb-6">For queries, collaborations, or support.</p>
+                            <a href="mailto:adityar@hypehausco.in" className="text-[#8B5CF6] hover:underline font-semibold block mb-2">adityar@hypehausco.in</a>
+                            <a href="tel:+917709225474" className="text-[#8B5CF6] hover:underline font-semibold block">+91 77092 25474</a>
                         </div>
 
                         <div className="bg-[#141519] border border-white/10 rounded-2xl p-8">
                             <h3 className="text-xl font-bold text-white mb-4">Event Organizers</h3>
                             <p className="mb-6">Want to list your event on HypeHaus?</p>
-                            <a href="mailto:partners@hypehausco.in" className="text-[#8B5CF6] hover:underline font-semibold block mb-2">partners@hypehausco.in</a>
+                            <a href="mailto:admin@hypearchy.in" className="text-[#8B5CF6] hover:underline font-semibold block mb-2">admin@hypearchy.in</a>
                         </div>
                     </div>
 
-                    <h2 className="text-2xl font-bold text-white mt-12 mb-4">Our Office</h2>
+                    <h2 className="text-2xl font-bold text-white mt-12 mb-4">Office Address</h2>
                     <address className="not-italic text-gray-400">
-                        HypeHaus Inc.<br />
-                        Himagiri Meadows, Bannerghatta Road,<br />
-                        Bangalore - 560083<br />
+                        Hypehaus Entertainment Pvt Ltd<br />
+                        127, Om Nagar, Sakkardhara,<br />
+                        Nagpur, Maharashtra 440024<br />
                         India
                     </address>
                 </div>

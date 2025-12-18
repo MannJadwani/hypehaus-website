@@ -38,7 +38,7 @@ export function Footer() {
                     <div>
                         <h3 className="text-white font-semibold mb-6">Support</h3>
                         <ul className="space-y-4 text-sm text-gray-400">
-                            <li><a href="mailto:support@hypehausco.in" className="hover:text-[#8B5CF6] transition-colors">Help Center</a></li>
+                            <li><a href="mailto:adityar@hypehausco.in" className="hover:text-[#8B5CF6] transition-colors">Help Center</a></li>
                             <li><Link href="/tickets" className="hover:text-[#8B5CF6] transition-colors">My Tickets</Link></li>
                             <li><Link href="/refund-policy" className="hover:text-[#8B5CF6] transition-colors">Refund Policy</Link></li>
                         </ul>
@@ -56,7 +56,7 @@ export function Footer() {
 
                 {/* Bottom Bar */}
                 <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-                    <p>© {new Date().getFullYear()} HypeHaus Inc. All rights reserved.</p>
+                    <p>© {new Date().getFullYear()} Hypehaus Entertainment Pvt Ltd. All rights reserved.</p>
                     <div className="flex gap-6">
                         <a href="#" className="hover:text-white transition-colors">Instagram</a>
                         <a href="#" className="hover:text-white transition-colors">Twitter</a>
