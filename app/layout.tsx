@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/auth-context';
 import { Header } from '@/components/header';
+import { Footer } from '@/components/footer';
 
 export const metadata: Metadata = {
   title: 'HypeHaus - Find the night. Own the moment.',
@@ -40,6 +41,7 @@ export default function RootLayout({
           <main className="min-h-screen pt-16">
             {children}
           </main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>
