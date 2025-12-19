@@ -99,7 +99,7 @@ export default function OnboardingPage() {
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="animate-pulse text-[var(--text-tertiary)]">Loading...</div>
+        <div className="animate-pulse text-[var(--color-text-tertiary)]">Loading...</div>
       </div>
     );
   }
@@ -113,12 +113,12 @@ export default function OnboardingPage() {
       >
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">Complete Your Profile</h1>
-          <p className="text-[var(--text-secondary)]">Tell us a bit about yourself</p>
+          <p className="text-[var(--color-text-secondary)]">Tell us a bit about yourself</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card p-6 space-y-5">
           <div>
-            <label className="block text-sm text-[var(--text-secondary)] mb-2">
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-2">
               Full Name <span className="text-red-400">*</span>
             </label>
             <input
@@ -132,7 +132,7 @@ export default function OnboardingPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-[var(--text-secondary)] mb-2">
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-2">
               Email
             </label>
             <input
@@ -145,7 +145,7 @@ export default function OnboardingPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-[var(--text-secondary)] mb-2">
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-2">
               Age <span className="text-red-400">*</span>
             </label>
             <input
@@ -161,7 +161,7 @@ export default function OnboardingPage() {
           </div>
 
           <div>
-            <label className="block text-sm text-[var(--text-secondary)] mb-2">
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-2">
               Gender <span className="text-red-400">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
@@ -171,10 +171,10 @@ export default function OnboardingPage() {
                   type="button"
                   onClick={() => setGender(g.value)}
                   className={cn(
-                    'px-4 py-2 rounded-[var(--radius-md)] text-sm font-semibold transition-colors border',
+                    'px-6 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-200 border text-center',
                     gender === g.value
-                      ? 'bg-[var(--primary-dark)] border-transparent text-[var(--text)]'
-                      : 'bg-[var(--background-elevated)] border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--border-medium)]'
+                      ? 'bg-gradient-to-br from-[#8B5CF6] to-[#2B124C] border-transparent text-white shadow-lg shadow-purple-500/20 scale-[1.05]'
+                      : 'bg-[#1E1F24] border-white/10 text-white/60 hover:border-white/20 hover:bg-[#25262C]'
                   )}
                 >
                   {g.label}
@@ -195,7 +195,7 @@ export default function OnboardingPage() {
           </button>
         </form>
 
-        <p className="text-xs text-center text-[var(--text-disabled)] mt-6 px-4">
+        <p className="text-xs text-center text-[var(--color-text-muted)] mt-6 px-4">
           We collect this information to personalize your experience and ensure you receive relevant event recommendations.
         </p>
       </motion.div>
