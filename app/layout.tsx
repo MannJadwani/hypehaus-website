@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/context/auth-context';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: 'HypeHaus - Find the night. Own the moment.',
@@ -27,6 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <Analytics />
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
