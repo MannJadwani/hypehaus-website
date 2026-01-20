@@ -241,11 +241,6 @@ function PaymentContent() {
       return;
     }
 
-    if (!razorpayLoaded || !window.Razorpay) {
-      setError('Payment system is loading. Please try again in a moment.');
-      return;
-    }
-
     setProcessing(true);
     setError(null);
 
@@ -304,6 +299,14 @@ function PaymentContent() {
         setTimeout(() => {
           router.push('/tickets');
         }, 1500);
+        setProcessing(false);
+        return;
+      }
+
+      // Only check Razorpay SDK for paid tickets
+      if (!razorpayLoaded || !window.Razorpay) {
+        setError('Payment system is loading. Please try again in a moment.');
+        setProcessing(false);
         return;
       }
 
