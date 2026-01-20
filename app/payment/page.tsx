@@ -268,6 +268,17 @@ function PaymentContent() {
             email: email,
             contact: `+91${whatsappNumber}`,
           },
+          order_data: {
+            event_id: eventId,
+            tier_id: tierId,
+            quantity: qty,
+            total_amount_cents: totalAmount,
+            currency: (tier.currency || 'INR').toUpperCase(),
+            attendee_names: attendeeNames.filter(name => name.trim()),
+            email: email,
+            whatsapp_number: whatsappNumber,
+            need_cab: needCab,
+          },
           notes: {
             event_id: eventId,
             tier_id: tierId,
