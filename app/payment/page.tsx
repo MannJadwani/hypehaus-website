@@ -196,7 +196,12 @@ function PaymentContent() {
     }
   }, [razorpayLoaded]);
 
-  const totalAmount = (tier?.price_cents || 0) * qty;
+  const subtotal = (tier?.price_cents || 0) * qty;
+
+  // Fee calculations: 2% convenience fee + 18% GST on convenience fee
+  const convenienceFee = Math.round(subtotal * 0.02);
+  const gstOnFee = Math.round(convenienceFee * 0.18);
+  const totalAmount = subtotal + convenienceFee + gstOnFee;
 
   const updateAttendeeName = (index: number, value: string) => {
     const newNames = [...attendeeNames];
@@ -290,6 +295,16 @@ function PaymentContent() {
       if (orderError) {
         console.error('Edge Function error:', orderError);
         throw new Error(orderError.message || 'Failed to create order');
+      }
+
+      // Handle FREE tickets - skip Razorpay modal
+      if (orderData?.is_free) {
+        console.log('FREE TICKET BOOKED - Skipping Razorpay modal');
+        setError('Free ticket booked successfully!');
+        setTimeout(() => {
+          router.push('/tickets');
+        }, 1500);
+        return;
       }
 
       if (!orderData?.order_id || !orderData?.key_id) {
@@ -594,6 +609,18 @@ function PaymentContent() {
                     <Icon name="plus" size={16} style={{ color: 'rgba(255,255,255,0.7)' }} />
                   </button>
                 </div>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span style={{ color: 'rgba(255,255,255,0.65)' }}>Subtotal</span>
+                <span style={{ color: 'rgba(255,255,255,0.95)' }}>{formatPrice(subtotal, tier?.currency)}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span style={{ color: 'rgba(255,255,255,0.65)' }}>Convenience Fee (2%)</span>
+                <span style={{ color: 'rgba(255,255,255,0.95)' }}>{formatPrice(convenienceFee, tier?.currency)}</span>
+              </div>
+              <div className="flex justify-between items-center mb-4">
+                <span style={{ color: 'rgba(255,255,255,0.65)' }}>GST on Fee (18%)</span>
+                <span style={{ color: 'rgba(255,255,255,0.95)' }}>{formatPrice(gstOnFee, tier?.currency)}</span>
               </div>
               <hr style={{ borderColor: 'rgba(255,255,255,0.06)' }} className="mb-4" />
               <div className="flex justify-between items-center text-lg font-bold">
