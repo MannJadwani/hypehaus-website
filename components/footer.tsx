@@ -63,7 +63,7 @@ export function Footer() {
                     <div className="flex gap-6">
                         <a href="https://www.instagram.com/hypehaus.co?igsh=MWZ3bDE2bjF5NDVpaw==" className="hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">Instagram</a>
                         <a href="#" className="hover:text-white transition-colors">Twitter</a>
-                        <a href="#" className="hover:text-white transition-colors">LinkedIn</a>
+                        <a href="https://www.linkedin.com/company/hypehaus-co/" className="hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">LinkedIn</a>
                     </div>
                 </div>
             </div>
