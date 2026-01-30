@@ -17,10 +17,13 @@ export function Footer() {
                                     className="object-cover"
                                 />
                             </div>
-                            <span className="font-bold text-xl text-white">HypeHaus</span>
+                            <span className="font-bold text-xl text-white">HYPEHAUS</span>
                         </Link>
                         <p className="text-gray-400 text-sm leading-relaxed">
                             Discover and book the best events, concerts, and experiences in your city. Find the night. Own the moment.
+                        </p>
+                        <p className="text-gray-400 text-sm leading-relaxed">
+                            127, Om Nagar, Sakkardhara, Nagpur 440024
                         </p>
                     </div>
 
@@ -56,7 +59,7 @@ export function Footer() {
 
                 {/* Bottom Bar */}
                 <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-                    <p>© {new Date().getFullYear()} Hypehaus Entertainment Pvt Ltd. All rights reserved.</p>
+                    <p>© {new Date().getFullYear()} HYPEHAUS Entertainment Pvt Ltd. All rights reserved.</p>
                     <div className="flex gap-6">
                         <a href="#" className="hover:text-white transition-colors">Instagram</a>
                         <a href="#" className="hover:text-white transition-colors">Twitter</a>

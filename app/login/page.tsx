@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -12,6 +12,14 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(c => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const handlePhoneChange = (text: string) => {
     let cleaned = text.replace(/[^0-9]/g, '');
@@ -29,6 +37,8 @@ export default function LoginPage() {
       setError('Please enter a valid 10-digit phone number');
       return;
     }
+
+    if (cooldown > 0) return;
 
     const full = `+91${digits}`;
     setIsLoading(true);
@@ -63,12 +73,21 @@ export default function LoginPage() {
 
     // Regular OTP flow
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({ phone: full });
+      console.log('Sending OTP to:', full);
+      const { error: otpError } = await supabase.auth.signInWithOtp({ phone: full, options: { channel: 'whatsapp' } });
       if (otpError) {
-        setError(otpError.message);
+        // Handle specific rate limit errors
+        if (otpError.message.includes('429') || otpError.message.toLowerCase().includes('rate limit') || otpError.message.includes('60203')) {
+          setError('Too many attempts. Please wait 10 minutes before trying again.');
+        } else {
+          setError(otpError.message);
+        }
         setIsLoading(false);
         return;
       }
+
+      // Start cooldown on success to prevent spamming
+      setCooldown(60);
       localStorage.setItem('hypehaus_phone', full);
       router.push('/otp');
     } catch (err: unknown) {
@@ -79,12 +98,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden"
       style={{ background: '#0B0B0D' }}
     >
       {/* Glow blobs */}
-      <div 
+      <div
         className="absolute rounded-full blur-3xl"
         style={{
           width: '300px',
@@ -95,7 +114,7 @@ export default function LoginPage() {
           opacity: 0.3
         }}
       />
-      <div 
+      <div
         className="absolute rounded-full blur-3xl"
         style={{
           width: '300px',
@@ -106,7 +125,7 @@ export default function LoginPage() {
           opacity: 0.25
         }}
       />
-      <div 
+      <div
         className="absolute rounded-full blur-3xl"
         style={{
           width: '250px',
@@ -125,16 +144,16 @@ export default function LoginPage() {
       >
         {/* Header */}
         <div className="text-center mb-10">
-          <div 
+          <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ 
+            style={{
               background: 'linear-gradient(135deg, #8B5CF6 0%, #2B124C 100%)',
               boxShadow: '0 8px 32px rgba(139, 92, 246, 0.4)'
             }}
           >
             <span className="text-white font-bold text-2xl">H</span>
           </div>
-          <h1 
+          <h1
             className="text-3xl font-bold mb-2"
             style={{ color: 'rgba(255,255,255,0.95)' }}
           >
@@ -146,21 +165,21 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <div 
+        <div
           className="p-6 sm:p-8"
-          style={{ 
+          style={{
             background: '#141519',
             borderRadius: '1.5rem',
             border: '1px solid rgba(255,255,255,0.06)'
           }}
         >
-          <h2 
+          <h2
             className="text-xl font-semibold mb-1"
             style={{ color: 'rgba(255,255,255,0.95)' }}
           >
             Welcome back
           </h2>
-          <p 
+          <p
             className="text-sm mb-6"
             style={{ color: 'rgba(255,255,255,0.55)' }}
           >
@@ -169,23 +188,23 @@ export default function LoginPage() {
 
           <form onSubmit={handleSendOtp}>
             <div className="mb-5">
-              <label 
+              <label
                 className="block text-sm mb-2"
                 style={{ color: 'rgba(255,255,255,0.7)' }}
               >
                 Mobile Number
               </label>
-              <div 
+              <div
                 className="flex items-center overflow-hidden"
-                style={{ 
+                style={{
                   background: '#1E1F24',
                   borderRadius: '1.125rem',
                   border: '1px solid rgba(255,255,255,0.06)'
                 }}
               >
-                <span 
+                <span
                   className="px-4 py-3"
-                  style={{ 
+                  style={{
                     color: 'rgba(255,255,255,0.7)',
                     borderRight: '1px solid rgba(255,255,255,0.06)',
                     background: 'rgba(255,255,255,0.02)'
@@ -199,7 +218,7 @@ export default function LoginPage() {
                   onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="Enter phone number"
                   className="flex-1 px-4 py-3 bg-transparent"
-                  style={{ 
+                  style={{
                     color: 'rgba(255,255,255,0.95)',
                     fontSize: '1rem'
                   }}
@@ -209,7 +228,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <p 
+              <p
                 className="text-sm mb-4"
                 style={{ color: '#f87171' }}
               >
@@ -219,16 +238,18 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || cooldown > 0}
               className="btn-primary w-full"
               style={{
-                opacity: isLoading ? 0.7 : 1,
-                cursor: isLoading ? 'not-allowed' : 'pointer'
+                opacity: (isLoading || cooldown > 0) ? 0.7 : 1,
+                cursor: (isLoading || cooldown > 0) ? 'not-allowed' : 'pointer'
               }}
             >
               {isLoading
                 ? isDemoPhone(phone) ? 'Signing in...' : 'Sending OTP...'
-                : isDemoPhone(phone) ? 'Demo Login' : 'Send OTP'
+                : cooldown > 0
+                  ? `Resend in ${cooldown}s`
+                  : isDemoPhone(phone) ? 'Demo Login' : 'Send OTP'
               }
             </button>
           </form>
@@ -236,7 +257,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center">
-          <p 
+          <p
             className="text-xs leading-relaxed mb-4 px-4"
             style={{ color: 'rgba(255,255,255,0.45)' }}
           >

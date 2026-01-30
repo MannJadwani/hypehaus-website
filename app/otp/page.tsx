@@ -74,7 +74,7 @@ export default function OtpPage() {
     setError(null);
 
     try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({ phone });
+      const { error: otpError } = await supabase.auth.signInWithOtp({ phone, options: { channel: 'whatsapp' } });
       if (otpError) {
         setError(otpError.message);
         return;
