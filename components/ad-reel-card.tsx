@@ -46,14 +46,20 @@ export function AdReelCard({ ad }: { ad: AdItem }) {
 
   return (
     <motion.div
-      className="relative w-full snap-start"
-      style={{ height: '100svh' }}
+      className="w-full snap-none px-4 py-3"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: 0.2 }}
     >
       <AdLink href={href}>
-        <div className="relative h-full w-full overflow-hidden bg-[#0B0B0D]">
+        <div
+          className="relative w-full overflow-hidden rounded-2xl border border-white/10"
+          style={{
+            height: 132,
+            background: '#141519',
+            boxShadow: '0 14px 34px rgba(0,0,0,0.45)',
+          }}
+        >
           <Image
             src={ad.image_url}
             alt={ad.title}
@@ -67,51 +73,46 @@ export function AdReelCard({ ad }: { ad: AdItem }) {
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.88) 100%)',
+              background: 'linear-gradient(to right, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.15) 100%)',
             }}
           />
 
           <div
-            className="absolute top-28 left-6 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={{
-              background: 'rgba(20,21,25,0.7)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.9)',
-              backdropFilter: 'blur(10px)',
-            }}
+            className="absolute inset-0 p-4 flex flex-col justify-between"
           >
-            <Icon name="sparkle" size={14} />
-            Ad
-          </div>
-
-          <div
-            className="absolute inset-x-0 bottom-0 px-3"
-            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
-          >
-            <div
-              className="rounded-2xl border border-white/10 px-4 py-3"
-              style={{
-                background: 'rgba(10,10,12,0.55)',
-                backdropFilter: 'blur(18px)',
-                boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
-              }}
-            >
-              <h2
-                className="text-xl font-bold mb-1"
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
                 style={{
-                  color: 'rgba(255,255,255,0.98)',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
+                  background: 'rgba(20,21,25,0.7)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: 'rgba(255,255,255,0.9)',
+                  backdropFilter: 'blur(10px)',
                 }}
               >
-                {ad.title}
-              </h2>
+                <Icon name="sparkle" size={12} />
+                Sponsored
+              </span>
+            </div>
 
-              {ad.subtitle && (
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <div
+                  className="text-base font-bold"
+                  style={{
+                    color: 'rgba(255,255,255,0.98)',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 1,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {ad.title}
+                </div>
+
+                {ad.subtitle && (
                 <p
-                  className="text-xs mb-2"
+                  className="text-xs mt-1"
                   style={{
                     color: 'rgba(255,255,255,0.72)',
                     display: '-webkit-box',
@@ -123,22 +124,19 @@ export function AdReelCard({ ad }: { ad: AdItem }) {
                   {ad.subtitle}
                 </p>
               )}
-
-              <div className="flex items-center gap-3">
-                <span className="ml-auto">
-                  <span
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-bold transition-all"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(139,92,246,1) 0%, rgba(43,18,76,1) 100%)',
-                      color: 'rgba(255,255,255,0.95)',
-                      boxShadow: '0 6px 20px rgba(139,92,246,0.35)',
-                    }}
-                  >
-                    <Icon name="chevron-right" size={14} />
-                    {ad.cta_text || 'Learn more'}
-                  </span>
-                </span>
               </div>
+
+              <span
+                className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-bold"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139,92,246,1) 0%, rgba(43,18,76,1) 100%)',
+                  color: 'rgba(255,255,255,0.95)',
+                  boxShadow: '0 6px 20px rgba(139,92,246,0.35)',
+                }}
+              >
+                {ad.cta_text || 'Learn more'}
+                <Icon name="chevron-right" size={14} />
+              </span>
             </div>
           </div>
         </div>

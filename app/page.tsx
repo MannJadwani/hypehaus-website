@@ -500,6 +500,7 @@ export default function HomePage() {
                   {mobileFeedItems.map((item, index) => (
                     <motion.div
                       key={item.kind === 'event' ? `event-${item.event.id}` : `ad-${item.ad.id}`}
+                      className={item.kind === 'ad' ? 'sm:col-span-2 lg:col-span-3' : undefined}
                       variants={{
                         hidden: { opacity: 0, y: 20 },
                         visible: { opacity: 1, y: 0 },
