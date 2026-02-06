@@ -4,8 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { EventCard, EventItem } from '@/components/event-card';
 import { EventReelCard } from '@/components/event-reel-card';
-import { AdReelCard, type AdItem } from '@/components/ad-reel-card';
-import { AdCard } from '@/components/ad-card';
+import { AdBannerCarousel, type AdBannerItem } from '@/components/ad-banner-carousel';
 import { Icon, IconName } from '@/components/icons';
 import { supabase } from '@/lib/supabase';
 import { formatPrice, formatDateShort } from '@/lib/utils';
@@ -21,7 +20,7 @@ const categories: { id: string; label: string; icon: IconName }[] = [
 
 export default function HomePage() {
   const [events, setEvents] = useState<EventItem[]>([]);
-  const [ads, setAds] = useState<AdItem[]>([]);
+  const [ads, setAds] = useState<AdBannerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState('All');
@@ -120,7 +119,7 @@ export default function HomePage() {
           console.warn('Failed to fetch ads:', adsError.message);
           setAds([]);
         } else {
-          const mappedAds: AdItem[] = ((adsData || []) as AdRow[]).map((a) => ({
+          const mappedAds: AdBannerItem[] = ((adsData || []) as AdRow[]).map((a) => ({
             id: a.id,
             placement: a.placement,
             title: a.title,
@@ -150,26 +149,6 @@ export default function HomePage() {
       return matchesCategory && matchesSearch;
     });
   }, [events, activeCategory, searchQuery]);
-
-  const mobileFeedItems = useMemo(() => {
-    if (!ads.length) {
-      return filteredEvents.map((event) => ({ kind: 'event' as const, event }));
-    }
-
-    const out: Array<{ kind: 'event'; event: EventItem } | { kind: 'ad'; ad: AdItem }> = [];
-    const interval = 5;
-    let adIdx = 0;
-
-    for (let i = 0; i < filteredEvents.length; i++) {
-      if (i > 0 && i % interval === 0 && ads[adIdx]) {
-        out.push({ kind: 'ad', ad: ads[adIdx] });
-        adIdx = (adIdx + 1) % ads.length;
-      }
-      out.push({ kind: 'event', event: filteredEvents[i] });
-    }
-
-    return out;
-  }, [filteredEvents, ads]);
 
   const isSearching = searchQuery.trim().length > 0;
   const mobilePadClass = isSearching ? 'pt-24' : 'pt-16';
@@ -275,6 +254,12 @@ export default function HomePage() {
       <div className="mx-auto px-0 sm:px-6 py-0 sm:py-6">
         {/* Mobile */}
         <div className="md:hidden">
+          {!loading && ads.length > 0 && !searchOpen && !isSearching && (
+            <div className="pt-16">
+              <AdBannerCarousel ads={ads} />
+            </div>
+          )}
+
           {searchOpen && (
             <div className="fixed inset-0 z-[60]">
               <div
@@ -408,13 +393,9 @@ export default function HomePage() {
                 </motion.div>
               ) : (
                 <div className="reels-container">
-                  {mobileFeedItems.map((item) =>
-                    item.kind === 'event' ? (
-                      <EventReelCard key={`event-${item.event.id}`} event={item.event} />
-                    ) : (
-                      <AdReelCard key={`ad-${item.ad.id}`} ad={item.ad} />
-                    )
-                  )}
+                  {filteredEvents.map((event) => (
+                    <EventReelCard key={event.id} event={event} />
+                  ))}
                 </div>
               )}
             </>
@@ -426,6 +407,12 @@ export default function HomePage() {
           <div className="sticky top-0 z-30 pt-6 pb-4 bg-[rgba(11,11,13,0.9)] backdrop-blur-md">
             {SearchControls}
           </div>
+
+          {!loading && ads.length > 0 && (
+            <div className="mb-6">
+              <AdBannerCarousel ads={ads} />
+            </div>
+          )}
 
           {error && (
             <div className="text-center py-16">
@@ -497,17 +484,16 @@ export default function HomePage() {
                   }}
                   className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto"
                 >
-                  {mobileFeedItems.map((item, index) => (
+                  {filteredEvents.map((event, index) => (
                     <motion.div
-                      key={item.kind === 'event' ? `event-${item.event.id}` : `ad-${item.ad.id}`}
-                      className={item.kind === 'ad' ? 'sm:col-span-2 lg:col-span-3' : undefined}
+                      key={event.id}
                       variants={{
                         hidden: { opacity: 0, y: 20 },
                         visible: { opacity: 1, y: 0 },
                       }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      {item.kind === 'event' ? <EventCard event={item.event} /> : <AdCard ad={item.ad} />}
+                      <EventCard event={event} />
                     </motion.div>
                   ))}
                 </motion.div>
