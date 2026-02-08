@@ -66,12 +66,7 @@ export function Header() {
   return (
     <>
       <header
-        className="fixed top-0 left-0 right-0 z-50"
-        style={{
-          background: 'rgba(11, 11, 13, 0.9)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-        }}
+        className="fixed top-0 left-0 right-0 z-50 hh-header"
       >
         <div
           style={{
@@ -102,7 +97,7 @@ export function Header() {
                   className="object-cover"
                 />
               </div>
-              <span className="text-xl font-bold" style={{ color: 'rgba(255,255,255,0.95)' }}>
+              <span className="text-xl font-bold hidden md:block" style={{ color: 'rgba(255,255,255,0.95)' }}>
                 HypeHaus
               </span>
             </Link>
@@ -269,14 +264,25 @@ export function Header() {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl transition-colors"
-              style={{ background: mobileMenuOpen ? '#1E1F24' : 'transparent' }}
-            >
-              <Icon name={mobileMenuOpen ? 'x' : 'menu'} size={24} style={{ color: 'rgba(255,255,255,0.9)' }} />
-            </button>
+            {/* Mobile Search + Menu */}
+            <div className="md:hidden flex items-center gap-2">
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('hh:search:open'));
+                }}
+                className="p-2 rounded-full"
+                aria-label="Search"
+              >
+                <Icon name="search" size={22} style={{ color: 'rgba(255,255,255,0.9)' }} />
+              </button>
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-full"
+                aria-label="Menu"
+              >
+                <Icon name={mobileMenuOpen ? 'x' : 'menu'} size={24} style={{ color: 'rgba(255,255,255,0.9)' }} />
+              </button>
+            </div>
           </div>
         </div>
       </header>

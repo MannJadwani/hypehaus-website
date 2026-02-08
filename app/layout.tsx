@@ -40,7 +40,7 @@ export default function RootLayout({
       <body className="antialiased">
         <AuthProvider>
           <Header />
-          <main className="min-h-screen pt-16">
+          <main className="min-h-screen pt-0 md:pt-16 overflow-x-hidden">
             {children}
           </main>
           <Footer />
