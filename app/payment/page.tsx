@@ -71,7 +71,21 @@ interface Event {
   venue_name: string | null;
   city: string | null;
   allow_cab?: boolean;
+  require_instagram_verification?: boolean;
+  require_email_domain_verification?: boolean;
+  allowed_email_domains?: string[] | null;
 }
+
+const INSTAGRAM_HANDLE_REGEX = /^[a-zA-Z0-9._]{1,30}$/;
+
+const normalizeDomain = (domain: string) => domain.trim().toLowerCase().replace(/^@/, '');
+
+const getEmailDomain = (email: string) => {
+  const parts = email.trim().toLowerCase().split('@');
+  if (parts.length !== 2) return null;
+  const domain = normalizeDomain(parts[1]);
+  return domain.length > 0 ? domain : null;
+};
 
 function PaymentContent() {
   const router = useRouter();
@@ -96,6 +110,7 @@ function PaymentContent() {
   const [email, setEmail] = useState('');
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [needCab, setNeedCab] = useState(false);
+  const [instagramHandle, setInstagramHandle] = useState('');
 
   // Check if Razorpay is already loaded (for client-side navigation)
   useEffect(() => {
@@ -210,13 +225,28 @@ function PaymentContent() {
   };
 
   const validateForm = (): boolean => {
-    if (!email || !email.includes('@')) {
+    const emailDomain = getEmailDomain(email);
+    if (!email || !emailDomain) {
       setError('Please enter a valid email address');
       return false;
+    }
+    if (event?.require_email_domain_verification) {
+      const allowedDomains = (event.allowed_email_domains ?? []).map(normalizeDomain);
+      if (!allowedDomains.includes(emailDomain)) {
+        setError(`This event allows only: ${allowedDomains.join(', ') || 'approved school/college domains'}`);
+        return false;
+      }
     }
     if (!whatsappNumber || whatsappNumber.length !== 10) {
       setError('Please enter a valid 10-digit WhatsApp number');
       return false;
+    }
+    if (event?.require_instagram_verification) {
+      const trimmedHandle = instagramHandle.trim().replace(/^@/, '');
+      if (!trimmedHandle || !INSTAGRAM_HANDLE_REGEX.test(trimmedHandle)) {
+        setError('Please enter a valid Instagram handle');
+        return false;
+      }
     }
     if (qty < 1) {
       setError('Quantity must be at least 1');
@@ -254,6 +284,8 @@ function PaymentContent() {
 
       // Generate receipt ID
       const receiptId = `HYPEHAUS-WEB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const normalizedInstagramHandle = instagramHandle.trim().replace(/^@/, '').toLowerCase();
+      const emailDomain = getEmailDomain(email);
 
       console.log('Creating Razorpay order...');
       // Call Edge Function to create Razorpay order (not payment link)
@@ -276,6 +308,8 @@ function PaymentContent() {
             currency: (tier.currency || 'INR').toUpperCase(),
             attendee_names: attendeeNames.filter(name => name.trim()),
             email: email,
+            email_domain: emailDomain,
+            instagram_handle: normalizedInstagramHandle || null,
             whatsapp_number: whatsappNumber,
             need_cab: needCab,
           },
@@ -289,6 +323,8 @@ function PaymentContent() {
             whatsapp_number: whatsappNumber,
             need_cab: needCab ? 'true' : 'false',
             email: email,
+            email_domain: emailDomain ?? '',
+            instagram_handle: normalizedInstagramHandle || '',
           },
         },
         headers: {
@@ -363,6 +399,8 @@ function PaymentContent() {
             currency: (tier?.currency || 'INR').toUpperCase(),
             attendee_names: attendeeNames.filter(name => name.trim()),
             email: email,
+            email_domain: emailDomain,
+            instagram_handle: normalizedInstagramHandle || null,
             whatsapp_number: whatsappNumber,
             need_cab: needCab,
           };
@@ -670,6 +708,11 @@ function PaymentContent() {
                   border: '1px solid rgba(255,255,255,0.06)'
                 }}
               />
+              {event?.require_email_domain_verification && (
+                <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  Allowed email domains: {(event.allowed_email_domains ?? []).join(', ')}
+                </p>
+              )}
 
               <label className="block text-sm mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
                 WhatsApp Number
@@ -702,6 +745,41 @@ function PaymentContent() {
                   }}
                 />
               </div>
+
+              {event?.require_instagram_verification && (
+                <>
+                  <label className="block text-sm mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                    Instagram Handle
+                  </label>
+                  <p className="text-xs mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                    We review this before final entry. Unverified handles may be refunded.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="px-4 py-3 rounded-2xl"
+                      style={{
+                        background: '#1E1F24',
+                        color: 'rgba(255,255,255,0.7)',
+                        border: '1px solid rgba(255,255,255,0.06)'
+                      }}
+                    >
+                      @
+                    </span>
+                    <input
+                      type="text"
+                      value={instagramHandle}
+                      onChange={(e) => setInstagramHandle(e.target.value.replace(/\s/g, ''))}
+                      placeholder="your_instagram"
+                      className="flex-1 px-4 py-3 rounded-2xl outline-none transition-colors"
+                      style={{
+                        background: '#1E1F24',
+                        color: 'rgba(255,255,255,0.95)',
+                        border: '1px solid rgba(255,255,255,0.06)'
+                      }}
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Attendee Names */}
@@ -863,4 +941,3 @@ export default function PaymentPage() {
     </Suspense>
   );
 }
-

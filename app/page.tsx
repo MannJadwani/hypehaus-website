@@ -254,7 +254,7 @@ export default function HomePage() {
       <div className="mx-auto px-0 sm:px-6 py-0 sm:py-6">
         {/* Mobile */}
         <div className="md:hidden">
-          {!loading && ads.length > 0 && !searchOpen && !isSearching && (
+          {!loading && ads.length > 0 && !searchOpen && (
             <div className="pt-16">
               <AdBannerCarousel ads={ads} />
             </div>

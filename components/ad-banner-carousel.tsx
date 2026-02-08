@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 
@@ -41,6 +40,7 @@ function BannerLink({
 export function AdBannerCarousel({ ads }: { ads: AdBannerItem[] }) {
   const items = useMemo(() => ads.filter((ad) => !!ad.image_url), [ads]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [failedImageIds, setFailedImageIds] = useState<Record<string, boolean>>({});
 
   const hasMultiple = items.length > 1;
   const displayIndex = items.length ? activeIndex % items.length : 0;
@@ -64,7 +64,7 @@ export function AdBannerCarousel({ ads }: { ads: AdBannerItem[] }) {
   if (!items.length) return null;
 
   return (
-    <section className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+    <section className="relative w-full sm:w-[calc(100%+3rem)] sm:-mx-6">
       <div
         className="relative overflow-hidden border-y"
         style={{
@@ -80,14 +80,27 @@ export function AdBannerCarousel({ ads }: { ads: AdBannerItem[] }) {
           {items.map((ad) => (
             <div key={ad.id} className="relative h-full min-w-full">
               <BannerLink ad={ad}>
-                <Image
-                  src={ad.image_url}
-                  alt={ad.title}
-                  fill
-                  className="object-cover"
-                  sizes="100vw"
-                  priority={false}
-                />
+                {!failedImageIds[ad.id] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={ad.image_url}
+                    alt={ad.title}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => {
+                      setFailedImageIds((prev) => ({ ...prev, [ad.id]: true }));
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        'linear-gradient(120deg, rgba(43,18,76,0.95) 0%, rgba(20,21,25,0.98) 60%, rgba(11,11,13,1) 100%)',
+                    }}
+                  />
+                )}
                 <div
                   className="absolute inset-0"
                   style={{
