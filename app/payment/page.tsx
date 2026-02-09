@@ -103,6 +103,7 @@ function PaymentContent() {
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   // Form fields
   const [qty, setQty] = useState(initialQty);
@@ -233,7 +234,7 @@ function PaymentContent() {
     if (event?.require_email_domain_verification) {
       const allowedDomains = (event.allowed_email_domains ?? []).map(normalizeDomain);
       if (!allowedDomains.includes(emailDomain)) {
-        setError(`This event allows only: ${allowedDomains.join(', ') || 'approved school/college domains'}`);
+        setError('Please use your college email address to continue.');
         return false;
       }
     }
@@ -452,9 +453,19 @@ function PaymentContent() {
             const verified = verifyResponse?.success === true || !!verifyResponse?.order_id;
 
             if (verified) {
-              // Success - redirect to tickets
-              console.log('Payment verified successfully!');
-              router.push('/tickets');
+              // Check if verification is pending
+              const needsVerification = verifyResponse?.instagram_verification_status === 'pending' ||
+                                     verifyResponse?.email_domain_status === 'rejected';
+
+              if (needsVerification) {
+                // Show verification modal
+                setShowVerificationModal(true);
+                setVerifying(false);
+              } else {
+                // Success - redirect to tickets
+                console.log('Payment verified successfully!');
+                router.push('/tickets');
+              }
             } else {
               // Verification returned but no success flag - might still be processing
               console.log('Verification response unclear:', verifyResponse);
@@ -710,7 +721,7 @@ function PaymentContent() {
               />
               {event?.require_email_domain_verification && (
                 <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                  Allowed email domains: {(event.allowed_email_domains ?? []).join(', ')}
+                  This event requires a valid college email address.
                 </p>
               )}
 
@@ -915,6 +926,47 @@ function PaymentContent() {
               <p className="text-sm" style={{ color: 'rgba(255,255,255,0.65)' }}>
                 This usually takes a few seconds. Please don&apos;t close this page.
               </p>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Verification Required Modal */}
+        {showVerificationModal && (
+          <div
+            className="fixed inset-0 flex items-center justify-center p-6 z-50"
+            style={{ background: 'rgba(0,0,0,0.85)' }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="p-8 rounded-[20px] max-w-md w-full text-center"
+              style={{
+                background: '#141519',
+                border: '1px solid rgba(255,255,255,0.08)'
+              }}
+            >
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(139,92,246,0.1)' }}>
+                <Icon name="clock" size={32} style={{ color: '#8B5CF6' }} />
+              </div>
+              <h2 className="text-2xl font-bold mb-3" style={{ color: 'rgba(255,255,255,0.95)' }}>
+                Ticket Booked!
+              </h2>
+              <p className="text-base mb-6" style={{ color: 'rgba(255,255,255,0.7)', lineHeight: '1.5' }}>
+                Your ticket has been booked successfully! We&apos;ll verify your details and send you the confirmation shortly. Check your tickets page for updates.
+              </p>
+              <button
+                onClick={() => {
+                  setShowVerificationModal(false);
+                  router.push('/tickets');
+                }}
+                className="w-full py-4 rounded-xl font-semibold transition-opacity hover:opacity-90"
+                style={{
+                  background: 'linear-gradient(135deg, #8B5CF6 0%, #2B124C 100%)',
+                  color: 'rgba(255,255,255,0.95)'
+                }}
+              >
+                View My Tickets
+              </button>
             </motion.div>
           </div>
         )}
