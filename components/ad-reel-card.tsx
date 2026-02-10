@@ -19,14 +19,18 @@ export type AdItem = {
 
 function AdLink({
   href,
+  targetUrl,
   children,
 }: {
   href: { kind: 'event'; id: string } | { kind: 'url'; url: string };
+  targetUrl?: string | null;
   children: ReactNode;
 }) {
   if (href.kind === 'event') {
+    const query = new URLSearchParams({ ref: 'ad' });
+    if (targetUrl) query.set('target', targetUrl);
     return (
-      <Link href={`/events/${href.id}`} className="block h-full">
+      <Link href={`/events/${href.id}?${query.toString()}`} className="block h-full">
         {children}
       </Link>
     );
@@ -46,20 +50,14 @@ export function AdReelCard({ ad }: { ad: AdItem }) {
 
   return (
     <motion.div
-      className="w-full snap-none px-4 py-3"
+      className="relative w-full snap-start"
+      style={{ height: '100svh' }}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.3 }}
     >
-      <AdLink href={href}>
-        <div
-          className="relative w-full overflow-hidden rounded-2xl border border-white/10"
-          style={{
-            height: 132,
-            background: '#141519',
-            boxShadow: '0 14px 34px rgba(0,0,0,0.45)',
-          }}
-        >
+      <AdLink href={href} targetUrl={ad.target_url}>
+        <div className="relative h-full w-full overflow-hidden bg-[#0B0B0D]">
           <Image
             src={ad.image_url}
             alt={ad.title}
@@ -73,48 +71,51 @@ export function AdReelCard({ ad }: { ad: AdItem }) {
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(to right, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.15) 100%)',
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.85) 100%)',
             }}
           />
 
-          <div
-            className="absolute inset-0 p-4 flex flex-col justify-between"
+          <div className="absolute top-28 left-6 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
+            style={{
+              background: 'rgba(20,21,25,0.7)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.9)',
+              backdropFilter: 'blur(10px)'
+            }}
           >
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+            <Icon name="sparkle" size={14} />
+            Sponsored
+          </div>
+
+          <div
+            className="absolute inset-x-0 bottom-0 px-3"
+            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+          >
+            <div
+              className="rounded-2xl border border-white/10 px-4 py-3"
+              style={{
+                background: 'rgba(10,10,12,0.55)',
+                backdropFilter: 'blur(18px)',
+                boxShadow: '0 16px 40px rgba(0,0,0,0.45)'
+              }}
+            >
+              <h2
+                className="text-xl font-bold mb-1"
                 style={{
-                  background: 'rgba(20,21,25,0.7)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.9)',
-                  backdropFilter: 'blur(10px)',
+                  color: 'rgba(255,255,255,0.98)',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
                 }}
               >
-                <Icon name="sparkle" size={12} />
-                Sponsored
-              </span>
-            </div>
-
-            <div className="flex items-end justify-between gap-3">
-              <div className="min-w-0">
-                <div
-                  className="text-base font-bold"
-                  style={{
-                    color: 'rgba(255,255,255,0.98)',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 1,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {ad.title}
-                </div>
-
-                {ad.subtitle && (
+                {ad.title}
+              </h2>
+              {ad.subtitle && (
                 <p
-                  className="text-xs mt-1"
+                  className="text-xs mb-2"
                   style={{
-                    color: 'rgba(255,255,255,0.72)',
+                    color: 'rgba(255,255,255,0.7)',
                     display: '-webkit-box',
                     WebkitLineClamp: 1,
                     WebkitBoxOrient: 'vertical',
@@ -124,14 +125,13 @@ export function AdReelCard({ ad }: { ad: AdItem }) {
                   {ad.subtitle}
                 </p>
               )}
-              </div>
 
               <span
-                className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-bold"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-bold"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(139,92,246,1) 0%, rgba(43,18,76,1) 100%)',
+                  background: 'linear-gradient(135deg, #8B5CF6 0%, #2B124C 100%)',
                   color: 'rgba(255,255,255,0.95)',
-                  boxShadow: '0 6px 20px rgba(139,92,246,0.35)',
+                  boxShadow: '0 6px 20px rgba(139,92,246,0.5)'
                 }}
               >
                 {ad.cta_text || 'Learn more'}

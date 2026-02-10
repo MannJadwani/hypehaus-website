@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { EventCard, EventItem } from '@/components/event-card';
 import { EventReelCard } from '@/components/event-reel-card';
 import { AdBannerCarousel, type AdBannerItem } from '@/components/ad-banner-carousel';
+import { AdReelCard, type AdItem } from '@/components/ad-reel-card';
 import { Icon, IconName } from '@/components/icons';
 import { supabase } from '@/lib/supabase';
 import { formatPrice, formatDateShort } from '@/lib/utils';
@@ -150,6 +151,47 @@ export default function HomePage() {
     });
   }, [events, activeCategory, searchQuery]);
 
+  // Interleave ads with events for mobile reel feed
+  type FeedItem = { type: 'event'; data: EventItem } | { type: 'ad'; data: AdItem };
+
+  const mobileFeedItems = useMemo(() => {
+    if (ads.length === 0) {
+      return filteredEvents.map((e) => ({ type: 'event' as const, data: e }));
+    }
+
+    const items: FeedItem[] = [];
+    const adInterval = 4; // Insert an ad every 4 events
+    let eventIndex = 0;
+    let adIndex = 0;
+
+    for (const event of filteredEvents) {
+      items.push({ type: 'event', data: event });
+      eventIndex++;
+
+      // Add an ad after every adInterval events, but only if we have ads left
+      if (eventIndex % adInterval === 0 && adIndex < ads.length) {
+        items.push({
+          type: 'ad',
+          data: {
+            id: ads[adIndex].id,
+            placement: ads[adIndex].placement,
+            title: ads[adIndex].title,
+            subtitle: ads[adIndex].subtitle,
+            image_url: ads[adIndex].image_url,
+            cta_text: ads[adIndex].cta_text,
+            target_url: ads[adIndex].target_url,
+            event_id: ads[adIndex].event_id,
+          },
+        });
+        adIndex++;
+        // Loop back to first ad if we've used all ads
+        if (adIndex >= ads.length) adIndex = 0;
+      }
+    }
+
+    return items;
+  }, [filteredEvents, ads]);
+
   const isSearching = searchQuery.trim().length > 0;
   const mobilePadClass = isSearching ? 'pt-24' : 'pt-16';
 
@@ -254,12 +296,6 @@ export default function HomePage() {
       <div className="mx-auto px-0 sm:px-6 py-0 sm:py-6">
         {/* Mobile */}
         <div className="md:hidden">
-          {!loading && ads.length > 0 && !searchOpen && (
-            <div className="pt-16">
-              <AdBannerCarousel ads={ads} />
-            </div>
-          )}
-
           {searchOpen && (
             <div className="fixed inset-0 z-[60]">
               <div
@@ -393,9 +429,12 @@ export default function HomePage() {
                 </motion.div>
               ) : (
                 <div className="reels-container">
-                  {filteredEvents.map((event) => (
-                    <EventReelCard key={event.id} event={event} />
-                  ))}
+                  {mobileFeedItems.map((item, index) => {
+                    if (item.type === 'ad') {
+                      return <AdReelCard key={`ad-${item.data.id}-${index}`} ad={item.data} />;
+                    }
+                    return <EventReelCard key={item.data.id} event={item.data} />;
+                  })}
                 </div>
               )}
             </>
