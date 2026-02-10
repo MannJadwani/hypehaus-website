@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,7 +25,22 @@ interface Ticket {
   tier_name: string | null;
   tier_price_cents: number | null;
   tier_currency: string | null;
+  instagram_verification_status: 'not_required' | 'pending' | 'approved' | 'rejected';
+  email_domain_status: 'not_required' | 'approved' | 'rejected';
 }
+
+type TicketRow = {
+  id: string;
+  attendee_name: string | null;
+  qr_code_data: string | null;
+  status: string;
+  event_id: string;
+  tier_id: string | null;
+  orders?: {
+    instagram_verification_status?: 'not_required' | 'pending' | 'approved' | 'rejected';
+    email_domain_status?: 'not_required' | 'approved' | 'rejected';
+  } | null;
+};
 
 export default function TicketsPage() {
   const { user } = useAuth();
@@ -34,118 +49,130 @@ export default function TicketsPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
-  useEffect(() => {
-    const fetchTickets = async () => {
-      if (!user) {
+  const fetchTickets = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setError(null);
+
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from('tickets')
+        .select(`
+          id,
+          attendee_name,
+          qr_code_data,
+          status,
+          event_id,
+          tier_id,
+          order_id,
+          orders!inner (
+            id,
+            user_id,
+            instagram_verification_status,
+            email_domain_status
+          )
+        `)
+        .eq('orders.user_id', user.id)
+        .in('status', ['active', 'used', 'cancelled'])
+        .order('created_at', { ascending: false });
+
+      if (ticketsError) {
+        console.error('Tickets error:', ticketsError);
+        throw new Error(ticketsError.message);
+      }
+
+      if (!ticketsData || ticketsData.length === 0) {
+        setTickets([]);
         setLoading(false);
         return;
       }
 
-      try {
-        setError(null);
+      // Fetch event details
+      const eventIds = [...new Set(ticketsData.map((t: { event_id: string }) => t.event_id))];
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('events')
+        .select('id, title, hero_image_url, start_at, venue_name, city')
+        .in('id', eventIds);
 
-        const { data: ticketsData, error: ticketsError } = await supabase
-          .from('tickets')
-          .select(`
-            id,
-            attendee_name,
-            qr_code_data,
-            status,
-            event_id,
-            tier_id,
-            order_id,
-            orders!inner (
-              id,
-              user_id
-            )
-          `)
-          .eq('orders.user_id', user.id)
-          .in('status', ['active', 'used', 'cancelled'])
-          .order('created_at', { ascending: false });
-
-        if (ticketsError) {
-          console.error('Tickets error:', ticketsError);
-          throw new Error(ticketsError.message);
-        }
-
-        if (!ticketsData || ticketsData.length === 0) {
-          setTickets([]);
-          setLoading(false);
-          return;
-        }
-
-        // Fetch event details
-        const eventIds = [...new Set(ticketsData.map((t: { event_id: string }) => t.event_id))];
-        const { data: eventsData, error: eventsError } = await supabase
-          .from('events')
-          .select('id, title, hero_image_url, start_at, venue_name, city')
-          .in('id', eventIds);
-
-        if (eventsError) {
-          console.error('Events error:', eventsError);
-          throw new Error(eventsError.message);
-        }
-
-        // Fetch tier details
-        const tierIds = [...new Set(ticketsData.map((t: { tier_id: string | null }) => t.tier_id).filter(Boolean))];
-        let tiersData: { id: string; name: string; price_cents: number; currency: string | null }[] = [];
-        if (tierIds.length > 0) {
-          const { data: tiers, error: tiersError } = await supabase
-            .from('ticket_tiers')
-            .select('id, name, price_cents, currency')
-            .in('id', tierIds);
-
-          if (tiersError) {
-            console.error('Tiers error:', tiersError);
-          } else {
-            tiersData = tiers || [];
-          }
-        }
-
-        // Create lookup maps
-        const eventsMap = new Map((eventsData || []).map((e: { id: string; title: string; hero_image_url: string | null; start_at: string | null; venue_name: string | null; city: string | null }) => [e.id, e]));
-        const tiersMap = new Map(tiersData.map((t) => [t.id, t]));
-
-        // Format tickets
-        const formattedTickets: Ticket[] = ticketsData.map((ticket: { id: string; attendee_name: string | null; qr_code_data: string | null; status: string; event_id: string; tier_id: string | null }) => {
-          const event = eventsMap.get(ticket.event_id);
-          const tier = ticket.tier_id ? tiersMap.get(ticket.tier_id) : null;
-
-          // Generate QR code URL from qr_code_data (larger size for modal)
-          const qrData = ticket.qr_code_data || JSON.stringify({ ticket_id: ticket.id });
-          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
-
-          return {
-            id: ticket.id,
-            qr_code_url: qrUrl,
-            qr_code_data: ticket.qr_code_data,
-            attendee_name: ticket.attendee_name,
-            event_id: ticket.event_id,
-            tier_id: ticket.tier_id,
-            status: ticket.status,
-            event_title: event?.title || 'Unknown Event',
-            event_image: event?.hero_image_url || 'https://images.unsplash.com/photo-1549451371-64aa98a6f660?q=80&w=400',
-            event_start_at: event?.start_at ?? null,
-            event_venue: event?.venue_name ?? null,
-            event_city: event?.city ?? null,
-            tier_name: tier?.name || 'General',
-            tier_price_cents: tier?.price_cents || 0,
-            tier_currency: tier?.currency || 'INR',
-          };
-        });
-
-        setTickets(formattedTickets);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Failed to load tickets';
-        setError(message);
-        console.error('Error fetching tickets:', err);
-      } finally {
-        setLoading(false);
+      if (eventsError) {
+        console.error('Events error:', eventsError);
+        throw new Error(eventsError.message);
       }
-    };
 
-    fetchTickets();
+      // Fetch tier details
+      const tierIds = [...new Set(ticketsData.map((t: { tier_id: string | null }) => t.tier_id).filter(Boolean))];
+      let tiersData: { id: string; name: string; price_cents: number; currency: string | null }[] = [];
+      if (tierIds.length > 0) {
+        const { data: tiers, error: tiersError } = await supabase
+          .from('ticket_tiers')
+          .select('id, name, price_cents, currency')
+          .in('id', tierIds);
+
+        if (tiersError) {
+          console.error('Tiers error:', tiersError);
+        } else {
+          tiersData = tiers || [];
+        }
+      }
+
+      // Create lookup maps
+      const eventsMap = new Map((eventsData || []).map((e: { id: string; title: string; hero_image_url: string | null; start_at: string | null; venue_name: string | null; city: string | null }) => [e.id, e]));
+      const tiersMap = new Map(tiersData.map((t) => [t.id, t]));
+
+      // Format tickets
+      const formattedTickets: Ticket[] = (ticketsData as TicketRow[]).map((ticket) => {
+        const event = eventsMap.get(ticket.event_id);
+        const tier = ticket.tier_id ? tiersMap.get(ticket.tier_id) : null;
+
+        // Generate QR code URL from qr_code_data (larger size for modal)
+        const qrData = ticket.qr_code_data || JSON.stringify({ ticket_id: ticket.id });
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
+
+        return {
+          id: ticket.id,
+          qr_code_url: qrUrl,
+          qr_code_data: ticket.qr_code_data,
+          attendee_name: ticket.attendee_name,
+          event_id: ticket.event_id,
+          tier_id: ticket.tier_id,
+          status: ticket.status,
+          event_title: event?.title || 'Unknown Event',
+          event_image: event?.hero_image_url || 'https://images.unsplash.com/photo-1549451371-64aa98a6f660?q=80&w=400',
+          event_start_at: event?.start_at ?? null,
+          event_venue: event?.venue_name ?? null,
+          event_city: event?.city ?? null,
+          tier_name: tier?.name || 'General',
+          tier_price_cents: tier?.price_cents || 0,
+          tier_currency: tier?.currency || 'INR',
+          instagram_verification_status: ticket.orders?.instagram_verification_status ?? 'not_required',
+          email_domain_status: ticket.orders?.email_domain_status ?? 'not_required',
+        };
+      });
+
+      setTickets(formattedTickets);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load tickets';
+      setError(message);
+      console.error('Error fetching tickets:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
+
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      fetchTickets();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [fetchTickets, user]);
 
   if (!user) {
     return (
@@ -251,6 +278,35 @@ export default function TicketsPage() {
             {tickets.map((ticket) => {
               const isUsed = ticket.status === 'used';
               const isCancelled = ticket.status === 'cancelled';
+              const isVerificationRejected =
+                ticket.instagram_verification_status === 'rejected' ||
+                ticket.email_domain_status === 'rejected';
+              const isVerificationPending = ticket.instagram_verification_status === 'pending';
+              const isVerificationApproved = ticket.instagram_verification_status === 'approved';
+              const verificationLabel = isVerificationRejected
+                ? 'REJECTED'
+                : isVerificationPending
+                  ? 'NOT CONFIRMED'
+                  : isVerificationApproved
+                    ? 'CONFIRMED'
+                    : null;
+              const verificationStyle = isVerificationRejected
+                ? {
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    border: '1px solid rgba(239, 68, 68, 0.5)',
+                    color: 'rgba(255,255,255,0.95)',
+                  }
+                : isVerificationPending
+                  ? {
+                      background: 'rgba(245, 158, 11, 0.2)',
+                      border: '1px solid rgba(245, 158, 11, 0.5)',
+                      color: 'rgba(255,255,255,0.95)',
+                    }
+                  : {
+                      background: 'rgba(34, 197, 94, 0.2)',
+                      border: '1px solid rgba(34, 197, 94, 0.5)',
+                      color: 'rgba(255,255,255,0.95)',
+                    };
 
               return (
                 <motion.div
@@ -288,7 +344,7 @@ export default function TicketsPage() {
                         {ticket.tier_name}
                       </div>
 
-                      {/* Status Badge */}
+                      {/* Ticket Status Badge */}
                       {(isUsed || isCancelled) && (
                         <div
                           className="absolute top-3 left-3 px-3 py-1.5 rounded-xl text-xs font-bold"
@@ -299,6 +355,20 @@ export default function TicketsPage() {
                           }}
                         >
                           {isUsed ? 'USED' : 'CANCELLED'}
+                        </div>
+                      )}
+
+                      {/* Verification Badge */}
+                      {verificationLabel && (
+                        <div
+                          className="absolute top-3 left-3 px-3 py-1.5 rounded-xl text-xs font-bold"
+                          style={
+                            (isUsed || isCancelled)
+                              ? { ...verificationStyle, top: '44px' }
+                              : verificationStyle
+                          }
+                        >
+                          {verificationLabel}
                         </div>
                       )}
                     </div>
@@ -324,11 +394,19 @@ export default function TicketsPage() {
                           {formatPrice(ticket.tier_price_cents, ticket.tier_currency)}
                         </p>
                         <button
-                          onClick={() => setSelectedTicket(ticket)}
+                          onClick={() => {
+                            if (isVerificationRejected) return;
+                            setSelectedTicket(ticket);
+                          }}
+                          disabled={isVerificationRejected}
                           className="text-sm font-semibold px-4 py-2 rounded-xl transition-all flex items-center gap-2"
                           style={{
-                            background: 'linear-gradient(135deg, #8B5CF6 0%, #2B124C 100%)',
-                            color: 'rgba(255,255,255,0.95)'
+                            background: isVerificationRejected
+                              ? 'rgba(255,255,255,0.1)'
+                              : 'linear-gradient(135deg, #8B5CF6 0%, #2B124C 100%)',
+                            color: isVerificationRejected ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.95)',
+                            border: isVerificationRejected ? '1px solid rgba(255,255,255,0.15)' : 'none',
+                            cursor: isVerificationRejected ? 'not-allowed' : 'pointer',
                           }}
                         >
                           <Icon name="grid" size={16} />
@@ -405,28 +483,77 @@ export default function TicketsPage() {
                       {selectedTicket.status === 'used' ? '✓ USED' : '✗ CANCELLED'}
                     </div>
                   )}
+                  {(selectedTicket.instagram_verification_status === 'pending' ||
+                    selectedTicket.instagram_verification_status === 'approved' ||
+                    selectedTicket.instagram_verification_status === 'rejected' ||
+                    selectedTicket.email_domain_status === 'rejected') && (
+                    <div
+                      className="inline-flex items-center gap-1.5 mt-3 ml-2 px-4 py-2 rounded-xl text-sm font-bold"
+                      style={
+                        selectedTicket.instagram_verification_status === 'rejected' ||
+                        selectedTicket.email_domain_status === 'rejected'
+                          ? {
+                              background: 'rgba(239, 68, 68, 0.2)',
+                              border: '1px solid rgba(239, 68, 68, 0.5)',
+                              color: '#f87171',
+                            }
+                          : selectedTicket.instagram_verification_status === 'pending'
+                            ? {
+                                background: 'rgba(245, 158, 11, 0.2)',
+                                border: '1px solid rgba(245, 158, 11, 0.5)',
+                                color: '#fbbf24',
+                              }
+                            : {
+                                background: 'rgba(34, 197, 94, 0.2)',
+                                border: '1px solid rgba(34, 197, 94, 0.5)',
+                                color: '#22c55e',
+                              }
+                      }
+                    >
+                      {selectedTicket.instagram_verification_status === 'rejected' || selectedTicket.email_domain_status === 'rejected'
+                        ? '✗ REJECTED'
+                        : selectedTicket.instagram_verification_status === 'pending'
+                          ? '⌛ NOT CONFIRMED'
+                          : '✓ CONFIRMED'}
+                    </div>
+                  )}
                 </div>
 
                 {/* QR Code */}
                 <div className="p-6 flex flex-col items-center">
-                  <div
-                    className="p-4 mb-4"
-                    style={{
-                      background: '#0B0B0D',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      opacity: (selectedTicket.status === 'used' || selectedTicket.status === 'cancelled') ? 0.5 : 1
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={selectedTicket.qr_code_url || ''}
-                      alt="QR Code"
-                      width={220}
-                      height={220}
-
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                  </div>
+                  {(selectedTicket.instagram_verification_status === 'rejected' || selectedTicket.email_domain_status === 'rejected') ? (
+                    <div
+                      className="p-6 mb-4 text-center rounded-xl"
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.12)',
+                        border: '1px solid rgba(239, 68, 68, 0.35)',
+                        color: '#fecaca',
+                      }}
+                    >
+                      <p className="font-semibold">QR disabled</p>
+                      <p className="text-sm mt-1" style={{ color: '#fca5a5' }}>
+                        This ticket was rejected and cannot be used for entry.
+                      </p>
+                    </div>
+                  ) : (
+                    <div
+                      className="p-4 mb-4"
+                      style={{
+                        background: '#0B0B0D',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        opacity: (selectedTicket.status === 'used' || selectedTicket.status === 'cancelled') ? 0.5 : 1
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={selectedTicket.qr_code_url || ''}
+                        alt="QR Code"
+                        width={220}
+                        height={220}
+                        style={{ imageRendering: 'pixelated' }}
+                      />
+                    </div>
+                  )}
 
                   {/* Ticket Details */}
                   <div className="w-full space-y-2 mb-4">
