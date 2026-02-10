@@ -45,6 +45,7 @@ export default function EventDetailsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const eventId = params.id as string;
+  const searchParams = useMemo(() => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : ''), []);
 
   const [event, setEvent] = useState<Event | null>(null);
   const [tiers, setTiers] = useState<TicketTier[]>([]);
@@ -59,6 +60,7 @@ export default function EventDetailsPage() {
   const [quantity, setQuantity] = useState(1);
 
   const [timeLeft, setTimeLeft] = useState('');
+  const [adTargetUrl, setAdTargetUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -92,6 +94,15 @@ export default function EventDetailsPage() {
         setTiers(tiersData || []);
         setImages(imagesData || []);
 
+        if (isFromAd) {
+          const { data: adData } = await supabase
+            .from('ads')
+            .select('target_url')
+            .eq('event_id', eventId)
+            .maybeSingle();
+          setAdTargetUrl(adData?.target_url || null);
+        }
+
         if (user) {
           const { data: wishlistData } = await supabase
             .from('event_wishlist')
@@ -118,6 +129,8 @@ export default function EventDetailsPage() {
   }, [event?.start_at]);
 
   const past = isPastEvent(event?.start_at);
+  const isFromAd = searchParams.get('ref') === 'ad';
+  const targetUrlFromParams = searchParams.get('target');
 
   useEffect(() => {
     if (!eventStart) return;
@@ -397,8 +410,23 @@ export default function EventDetailsPage() {
             )}
 
             {/* Top row */}
-            <div className="absolute top-4 left-4 right-4 flex items-center gap-3 z-20">
-              <Link
+            <div className={`absolute top-4 left-4 right-4 z-20 ${isFromAd ? 'flex flex-col gap-2' : 'flex items-center gap-3'}`}>
+              {isFromAd && (
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                  style={{
+                    background: 'rgba(20,21,25,0.7)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.9)',
+                    backdropFilter: 'blur(10px)',
+                  }}
+                >
+                  <Icon name="sparkle" size={12} />
+                  Sponsored
+                </span>
+              )}
+              <div className={`flex items-center gap-3 w-full ${isFromAd ? '' : ''}`}>
+                <Link
                 href="/"
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
                 style={{
@@ -454,6 +482,7 @@ export default function EventDetailsPage() {
                   }}
                 />
               </button>
+              </div>
             </div>
 
             {/* Bottom info */}
@@ -604,7 +633,7 @@ export default function EventDetailsPage() {
       </div>
 
       {/* Bottom CTA */}
-      {!past && (
+      {!past && !isFromAd && (
         <div
           className="fixed bottom-0 left-0 right-0 p-4"
           style={{
@@ -617,6 +646,29 @@ export default function EventDetailsPage() {
               <Icon name="ticket" size={20} />
               Book Tickets
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Ad CTA - Read More */}
+      {isFromAd && (
+        <div
+          className="fixed bottom-0 left-0 right-0 p-4"
+          style={{
+            background: '#0B0B0D',
+            borderTop: '1px solid rgba(255,255,255,0.06)'
+          }}
+        >
+          <div className="max-w-4xl mx-auto">
+            <a
+              href={targetUrlFromParams || adTargetUrl || `/events/${eventId}`}
+              target={targetUrlFromParams || adTargetUrl ? '_blank' : '_self'}
+              rel="noreferrer"
+              className="btn-primary w-full flex items-center justify-center gap-3"
+            >
+              Read More
+              <Icon name="send" size={20} />
+            </a>
           </div>
         </div>
       )}
