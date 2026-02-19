@@ -27,6 +27,17 @@ interface Ticket {
   tier_currency: string | null;
   instagram_verification_status: 'not_required' | 'pending' | 'approved' | 'rejected';
   email_domain_status: 'not_required' | 'approved' | 'rejected';
+  entry_gate_flow_enabled: boolean;
+  gate_progress: {
+    completedCount: number;
+    totalCount: number;
+  };
+  gate_timeline: {
+    gateId: string;
+    gateName: string;
+    status: 'pending' | 'scanned';
+    scannedAt: string | null;
+  }[];
 }
 
 type TicketRow = {
@@ -40,6 +51,20 @@ type TicketRow = {
     instagram_verification_status?: 'not_required' | 'pending' | 'approved' | 'rejected';
     email_domain_status?: 'not_required' | 'approved' | 'rejected';
   } | null;
+};
+
+type EventGateRow = {
+  id: string;
+  event_id: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+};
+
+type TicketGateScanRow = {
+  ticket_id: string;
+  gate_id: string;
+  scanned_at: string;
 };
 
 export default function TicketsPage() {
@@ -94,7 +119,7 @@ export default function TicketsPage() {
       const eventIds = [...new Set(ticketsData.map((t: { event_id: string }) => t.event_id))];
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
-        .select('id, title, hero_image_url, start_at, venue_name, city')
+        .select('id, title, hero_image_url, start_at, venue_name, city, enable_entry_gate_flow')
         .in('id', eventIds);
 
       if (eventsError) {
@@ -118,14 +143,64 @@ export default function TicketsPage() {
         }
       }
 
+      const { data: eventGatesData } = eventIds.length
+        ? await supabase
+            .from('event_entry_gates')
+            .select('id, event_id, name, sort_order, is_active')
+            .in('event_id', eventIds)
+        : { data: [] as EventGateRow[] };
+
+      const ticketIds = ticketsData.map((ticket: any) => ticket.id);
+      const { data: ticketGateScansData } = ticketIds.length
+        ? await supabase
+            .from('ticket_gate_scans')
+            .select('ticket_id, gate_id, scanned_at')
+            .in('ticket_id', ticketIds)
+        : { data: [] as TicketGateScanRow[] };
+
       // Create lookup maps
-      const eventsMap = new Map((eventsData || []).map((e: { id: string; title: string; hero_image_url: string | null; start_at: string | null; venue_name: string | null; city: string | null }) => [e.id, e]));
+      const eventsMap = new Map((eventsData || []).map((e: { id: string; title: string; hero_image_url: string | null; start_at: string | null; venue_name: string | null; city: string | null; enable_entry_gate_flow?: boolean }) => [e.id, e]));
       const tiersMap = new Map(tiersData.map((t) => [t.id, t]));
+      const eventGatesMap = new Map<string, EventGateRow[]>();
+      for (const gate of (eventGatesData ?? []) as EventGateRow[]) {
+        if (!gate.is_active) continue;
+        const existing = eventGatesMap.get(gate.event_id) ?? [];
+        existing.push(gate);
+        eventGatesMap.set(gate.event_id, existing);
+      }
+      for (const [eventId, gates] of eventGatesMap.entries()) {
+        gates.sort((a, b) => a.sort_order - b.sort_order);
+        eventGatesMap.set(eventId, gates);
+      }
+
+      const ticketScansMap = new Map<string, Map<string, string>>();
+      for (const scan of (ticketGateScansData ?? []) as TicketGateScanRow[]) {
+        const perTicket = ticketScansMap.get(scan.ticket_id) ?? new Map<string, string>();
+        if (!perTicket.has(scan.gate_id) || perTicket.get(scan.gate_id)! > scan.scanned_at) {
+          perTicket.set(scan.gate_id, scan.scanned_at);
+        }
+        ticketScansMap.set(scan.ticket_id, perTicket);
+      }
 
       // Format tickets
       const formattedTickets: Ticket[] = (ticketsData as TicketRow[]).map((ticket) => {
         const event = eventsMap.get(ticket.event_id);
         const tier = ticket.tier_id ? tiersMap.get(ticket.tier_id) : null;
+        const eventGates = eventGatesMap.get(ticket.event_id) ?? [];
+        const ticketScans = ticketScansMap.get(ticket.id) ?? new Map<string, string>();
+        const gateTimeline = eventGates.map((gate) => ({
+          gateId: gate.id,
+          gateName: gate.name,
+          status: ticketScans.has(gate.id) ? 'scanned' as const : 'pending' as const,
+          scannedAt: ticketScans.get(gate.id) ?? null,
+        }));
+        const completedCount = gateTimeline.filter((row) => row.status === 'scanned').length;
+        const totalCount = gateTimeline.length;
+        const isGateFlowEnabled = !!event?.enable_entry_gate_flow && totalCount > 0;
+        const derivedStatus =
+          isGateFlowEnabled && completedCount >= totalCount
+            ? 'used'
+            : ticket.status;
 
         // Generate QR code URL from qr_code_data (larger size for modal)
         const qrData = ticket.qr_code_data || JSON.stringify({ ticket_id: ticket.id });
@@ -138,7 +213,7 @@ export default function TicketsPage() {
           attendee_name: ticket.attendee_name,
           event_id: ticket.event_id,
           tier_id: ticket.tier_id,
-          status: ticket.status,
+          status: derivedStatus,
           event_title: event?.title || 'Unknown Event',
           event_image: event?.hero_image_url || 'https://images.unsplash.com/photo-1549451371-64aa98a6f660?q=80&w=400',
           event_start_at: event?.start_at ?? null,
@@ -149,6 +224,12 @@ export default function TicketsPage() {
           tier_currency: tier?.currency || 'INR',
           instagram_verification_status: ticket.orders?.instagram_verification_status ?? 'not_required',
           email_domain_status: ticket.orders?.email_domain_status ?? 'not_required',
+          entry_gate_flow_enabled: isGateFlowEnabled,
+          gate_progress: {
+            completedCount,
+            totalCount,
+          },
+          gate_timeline: gateTimeline,
         };
       });
 
@@ -389,6 +470,11 @@ export default function TicketsPage() {
                           Attendee: {ticket.attendee_name}
                         </p>
                       )}
+                      {ticket.entry_gate_flow_enabled && (
+                        <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.68)' }}>
+                          Entry Progress: {ticket.gate_progress.completedCount}/{ticket.gate_progress.totalCount} gates scanned
+                        </p>
+                      )}
                       <div className="flex items-center justify-between mt-3">
                         <p className="text-sm font-semibold" style={{ color: '#8B5CF6' }}>
                           {formatPrice(ticket.tier_price_cents, ticket.tier_currency)}
@@ -552,6 +638,48 @@ export default function TicketsPage() {
                         height={220}
                         style={{ imageRendering: 'pixelated' }}
                       />
+                    </div>
+                  )}
+
+                  {selectedTicket.entry_gate_flow_enabled && (
+                    <div className="w-full mb-4 rounded-xl p-3" style={{ background: '#0E0F15', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                          Entry Progress
+                        </p>
+                        <span
+                          className="text-xs px-2 py-1 rounded-full"
+                          style={{ background: 'rgba(139,92,246,0.25)', color: 'rgba(255,255,255,0.92)' }}
+                        >
+                          {selectedTicket.gate_progress.completedCount}/{selectedTicket.gate_progress.totalCount}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {selectedTicket.gate_timeline.map((gate) => (
+                          <div
+                            key={gate.gateId}
+                            className="flex items-center justify-between rounded-lg px-2 py-2"
+                            style={{ background: 'rgba(255,255,255,0.04)' }}
+                          >
+                            <div>
+                              <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.9)' }}>{gate.gateName}</p>
+                              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.56)' }}>
+                                {gate.scannedAt ? formatDate(gate.scannedAt) : 'Pending'}
+                              </p>
+                            </div>
+                            <span
+                              className="text-xs px-2 py-1 rounded-full"
+                              style={{
+                                background: gate.status === 'scanned' ? 'rgba(34,197,94,0.2)' : 'rgba(245,158,11,0.2)',
+                                border: gate.status === 'scanned' ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(245,158,11,0.4)',
+                                color: gate.status === 'scanned' ? '#22c55e' : '#fbbf24',
+                              }}
+                            >
+                              {gate.status === 'scanned' ? 'Scanned' : 'Pending'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
