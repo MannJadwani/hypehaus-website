@@ -855,6 +855,39 @@ function PaymentContent() {
                   </button>
                   <span style={{ color: 'rgba(255,255,255,0.65)' }}>Need a cab to the event?</span>
                 </label>
+                <div className="mt-3 pl-3" style={{ borderLeft: '2px solid rgba(255,255,255,0.25)' }}>
+                  <p className="text-xs leading-5" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                    ⚠️ Hypehaus facilitates transport connections. Please verify driver details and ensure personal safety
+                    during travel.
+                  </p>
+                </div>
+                {needCab && (
+                  <div
+                    className="mt-4 rounded-2xl p-4"
+                    style={{
+                      border: '1px solid rgba(251, 191, 36, 0.35)',
+                      background: 'rgba(251, 191, 36, 0.08)'
+                    }}
+                  >
+                    <h4 className="text-sm font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.92)' }}>
+                      Transport Disclaimer
+                    </h4>
+                    <p className="text-xs leading-5" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                      Hypehaus provides cab discovery and booking facilitation through third-party transport vendors for user
+                      convenience. Hypehaus does not own, operate, or directly control any transport services listed on the
+                      platform.
+                    </p>
+                    <p className="text-xs leading-5 mt-2" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                      All transportation services are provided by independent third-party vendors, and users are advised to
+                      exercise personal judgment and standard safety precautions while using such services.
+                    </p>
+                    <p className="text-xs leading-5 mt-2" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                      By proceeding with a cab booking, you acknowledge that Hypehaus acts solely as a technology platform and
+                      shall not be held liable for actions, delays, incidents, or service deficiencies arising from third-party
+                      transport providers.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

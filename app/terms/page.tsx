@@ -46,6 +46,12 @@ export default function TermsPage() {
                         <p>
                             HypeHaus shall not be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.
                         </p>
+                        <div className="mt-5 pl-4 border-l border-white/25">
+                            <h3 className="text-xl font-semibold text-white mb-2">Limitation of Liability — Transport</h3>
+                            <p>
+                                Hypehaus shall not be responsible for any loss, injury, damage, misconduct, or disputes arising from transportation services booked via third-party vendors. Users agree that all travel arrangements are undertaken at their own discretion and risk.
+                            </p>
+                        </div>
                     </section>
 
                     <section>
